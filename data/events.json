@@ -1,0 +1,260 @@
+[
+  {"_doc": "Random events fire on the '?' days of the week. Effect types: rating, budget, fatigue, ltf, away, spawn_task, modifier, relic, consumable, chance, flag, fatigue_floor. 'who'/'pick' choose analysts: on_shift, all, target, best_skill (with skill), random, least_fatigued, most_fatigued."},
+
+  {"id": "ministry_briefing", "title": "The Ministry wants a briefing", "weight": 1.0,
+   "text": "The Minister's office has asked for an in-person briefing on recent seismic activity. Today.",
+   "options": [
+     {"label": "Send your best communicator", "hint": "Best Comms analyst on shift away for 3 h. Trust +6.",
+      "requires": {"on_shift_min": 2},
+      "effects": [{"type": "away", "pick": "best_skill", "skill": "comms", "hours": 3, "reason": "Ministry briefing"}, {"type": "rating", "amount": 6}]},
+     {"label": "Send slides instead", "hint": "Adds a 'Prepare ministry briefing' task. Trust +2.",
+      "effects": [{"type": "spawn_task", "task": "ministry_briefing_prep", "count": 1}, {"type": "rating", "amount": 2}]},
+     {"label": "Politely decline", "hint": "Trust -3.",
+      "effects": [{"type": "rating", "amount": -3}]}
+   ]},
+
+  {"id": "school_visit", "title": "School group at reception", "weight": 1.0,
+   "text": "A Year 12 science class has turned up for a tour of the monitoring centre. Someone forgot to put it in the calendar.",
+   "options": [
+     {"label": "Give them the tour", "hint": "A random analyst on shift is away for 1.5 h. Trust +3. 40% chance a keen graduate applies.",
+      "requires": {"on_shift_min": 2},
+      "effects": [{"type": "away", "pick": "random", "hours": 1.5, "reason": "School tour"}, {"type": "rating", "amount": 3},
+                  {"type": "chance", "p": 0.4, "success": [{"type": "flag", "key": "graduate_in_shop", "value": true}],
+                   "success_text": "One of the students asks how to become a GHA. Look out for them in the shop.",
+                   "failure_text": "The students loved the helicorders."}]},
+     {"label": "Reschedule", "hint": "Trust -1.",
+      "effects": [{"type": "rating", "amount": -1}]}
+   ]},
+
+  {"id": "power_cut", "title": "Power cut", "weight": 0.8,
+   "text": "The building has lost mains power. The UPS is holding, but the secondary systems are sluggish.",
+   "options": [
+     {"label": "Ride it out on backups", "hint": "Everything 30% slower for 5 h.",
+      "effects": [{"type": "modifier", "hours": 5, "modifier": {"stat": "speed", "op": "mult", "value": 0.7}}]},
+     {"label": "Hire a generator", "hint": "Costs $3k.", "requires": {"budget": 3},
+      "effects": [{"type": "budget", "amount": -3}]}
+   ]},
+
+  {"id": "phantom_events", "title": "Phantom events", "weight": 0.8,
+   "text": "The automatic system is detecting earthquakes that don't exist. Analysts keep tripping over them.",
+   "options": [
+     {"label": "Investigate now", "hint": "Adds a Systems task: 'Investigate phantom events'.",
+      "effects": [{"type": "spawn_task", "task": "phantom_events", "count": 1}]},
+     {"label": "Ignore it for now", "hint": "40% more errors for 24 h.",
+      "effects": [{"type": "modifier", "hours": 24, "modifier": {"stat": "error", "op": "mult", "value": 1.4}}]}
+   ]},
+
+  {"id": "vendor_beta", "title": "Vendor offers a beta tool", "weight": 0.7,
+   "text": "A software vendor offers their shiny new beta tool for free. What could go wrong?",
+   "options": [
+     {"label": "Accept the beta", "hint": "Gain a random common or uncommon tool. 50% chance it crashes right away.",
+      "effects": [{"type": "relic", "rarities": ["common", "uncommon"]},
+                  {"type": "chance", "p": 0.5, "success": [{"type": "spawn_task", "task": "beta_crash", "count": 1}],
+                   "success_text": "It crashed within the hour.", "failure_text": "It works. Suspiciously well."}]},
+     {"label": "No thanks", "hint": "Nothing happens.", "effects": []}
+   ]},
+
+  {"id": "journalist", "title": "Journalist on the phone", "weight": 1.0,
+   "text": "A national radio show wants someone on air in an hour to talk about recent quakes.",
+   "options": [
+     {"label": "Do the interview", "hint": "Adds a Comms task 'Media interview'. Trust +4.",
+      "effects": [{"type": "spawn_task", "task": "media_interview", "count": 1}, {"type": "rating", "amount": 4}]},
+     {"label": "\"No comment\"", "hint": "Trust -2.",
+      "effects": [{"type": "rating", "amount": -2}]}
+   ]},
+
+  {"id": "cake", "title": "Someone brought cake", "weight": 1.0,
+   "text": "There is a chocolate cake in the kitchen with a note: 'For the night crew. And the day crew. Just share it.'",
+   "options": [
+     {"label": "Excellent", "hint": "Everyone on shift: fatigue -15.",
+      "effects": [{"type": "fatigue", "who": "on_shift", "amount": -15}]}
+   ]},
+
+  {"id": "storm_outages", "title": "Storm takes out stations", "weight": 0.9,
+   "text": "A storm front has knocked several remote stations offline.",
+   "options": [
+     {"label": "Handle it in-house", "hint": "Adds 3 'Seismic station outage' tasks.",
+      "effects": [{"type": "spawn_task", "task": "station_outage", "count": 3}]},
+     {"label": "Call the field contractor", "hint": "Costs $2k. Adds 1 'Coordinate station repair' task.", "requires": {"budget": 2},
+      "effects": [{"type": "budget", "amount": -2}, {"type": "spawn_task", "task": "station_repair", "count": 1}]}
+   ]},
+
+  {"id": "consultancy", "title": "Research team needs a hand", "weight": 0.8,
+   "text": "A research group will pay for an analyst's time to help relocate an old earthquake sequence.",
+   "options": [
+     {"label": "Lend them someone", "hint": "Least tired analyst on shift away for 3 h. +$4k.",
+      "requires": {"on_shift_min": 2},
+      "effects": [{"type": "away", "pick": "least_fatigued", "hours": 3, "reason": "Research consultancy"}, {"type": "budget", "amount": 4}]},
+     {"label": "We're too busy", "hint": "Nothing happens.", "effects": []}
+   ]},
+
+  {"id": "windfall", "title": "Unspent equipment budget", "weight": 0.6,
+   "text": "Finance found some unspent equipment budget. Use it or lose it before the end of the month.",
+   "options": [
+     {"label": "Take the cash", "hint": "+$5k.", "effects": [{"type": "budget", "amount": 5}]},
+     {"label": "Buy a random tool", "hint": "Gain a random tool (any rarity).", "effects": [{"type": "relic", "rarities": ["common", "uncommon", "rare"]}]}
+   ]},
+
+  {"id": "volcanic_unrest", "title": "Unrest at Whakaari", "weight": 0.8,
+   "text": "Gas output and tremor have spiked at the island volcano. The volcanologists want everything you've got.",
+   "options": [
+     {"label": "Full assessment", "hint": "Adds 'Volcanic unrest assessment' and 'Volcano webcam review'. Trust +2.",
+      "effects": [{"type": "spawn_task", "task": "unrest_assessment", "count": 1}, {"type": "spawn_task", "task": "webcam_review", "count": 1}, {"type": "rating", "amount": 2}]},
+     {"label": "Watch and wait", "hint": "Adds 'Volcanic tremor check'.",
+      "effects": [{"type": "spawn_task", "task": "volcanic_tremor", "count": 1}]}
+   ]},
+
+  {"id": "software_update", "title": "Mandatory software update", "weight": 0.7,
+   "text": "IT says the analysis software needs an update. It will be slow while it installs, but faster afterwards.",
+   "options": [
+     {"label": "Update now", "hint": "Everything 20% slower for 4 h, then earthquake tasks 10% faster for 3 days.",
+      "effects": [{"type": "modifier", "hours": 4, "modifier": {"stat": "speed", "op": "mult", "value": 0.8}},
+                  {"type": "modifier", "hours": 72, "modifier": {"stat": "speed", "op": "mult", "value": 1.1, "when": {"kind": "eq"}}}]},
+     {"label": "Postpone", "hint": "Nothing happens.", "effects": []}
+   ]},
+
+  {"id": "aircon", "title": "Air conditioning broken", "weight": 0.7,
+   "text": "The ops room is getting very warm.",
+   "options": [
+     {"label": "Open a window", "hint": "Everyone tires 30% faster for 12 h.",
+      "effects": [{"type": "modifier", "hours": 12, "modifier": {"stat": "fatigue_gain", "op": "mult", "value": 1.3}}]},
+     {"label": "Emergency repair", "hint": "Costs $2k.", "requires": {"budget": 2},
+      "effects": [{"type": "budget", "amount": -2}]}
+   ]},
+
+  {"id": "viral_post", "title": "Viral 'prediction' post", "weight": 0.8,
+   "text": "A post claiming a big quake is coming this weekend has gone viral. Enquiries are piling up.",
+   "options": [
+     {"label": "Publish a debunk", "hint": "Adds a Comms task 'Debunk viral post'. Trust +3.",
+      "effects": [{"type": "spawn_task", "task": "debunk_post", "count": 1}, {"type": "rating", "amount": 3}]},
+     {"label": "Ignore it", "hint": "Trust -4. Adds 2 'Public enquiry email' tasks.",
+      "effects": [{"type": "rating", "amount": -4}, {"type": "spawn_task", "task": "public_enquiry", "count": 2}]}
+   ]},
+
+  {"id": "award", "title": "Internal award nomination", "weight": 0.5,
+   "text": "The centre has been nominated for an internal 'Science Impact' award.",
+   "options": [
+     {"label": "Nice!", "hint": "Trust +4.", "effects": [{"type": "rating", "amount": 4}]}
+   ]},
+
+  {"id": "overtime_offer", "title": "Volunteer for overtime", "weight": 0.6,
+   "text": "One of your off-duty analysts offers to come in for a few hours to help clear the backlog.",
+   "options": [
+     {"label": "Gratefully accept", "hint": "Gain a free 'Focus Hour' supply. A random off-duty analyst: long-term fatigue +4.",
+      "effects": [{"type": "consumable", "id": "focus_hour"}, {"type": "ltf", "who": "random_off_shift", "amount": 4}]},
+     {"label": "Tell them to rest", "hint": "Nothing happens.", "effects": []}
+   ]},
+
+  {"id": "fire_drill", "title": "Fire drill", "weight": 0.8,
+   "text": "The fire wardens are clearing the building for a drill, and they mean everyone, ops room included.",
+   "options": [
+     {"label": "Everyone out", "hint": "Everyone on shift is away for 30 minutes.",
+      "effects": [{"type": "away", "pick": "on_shift", "hours": 0.5, "reason": "Fire drill"}]},
+     {"label": "Leave one analyst at the desks", "hint": "A random analyst on shift is away for 30 minutes. Trust -1 (the wardens complain).",
+      "requires": {"on_shift_min": 2},
+      "effects": [{"type": "away", "pick": "random", "hours": 0.5, "reason": "Fire drill"}, {"type": "rating", "amount": -1}]}
+   ]},
+
+  {"id": "coffee_broken", "title": "The coffee machine has died", "weight": 0.9,
+   "text": "A sad gurgle, a puff of steam, and the ops room coffee machine is no more.",
+   "options": [
+     {"label": "Live without it", "hint": "Everyone tires 20% faster for 24 h.",
+      "effects": [{"type": "modifier", "hours": 24, "modifier": {"stat": "fatigue_gain", "op": "mult", "value": 1.2}}]},
+     {"label": "Buy a new one today", "hint": "Costs $1.5k.", "requires": {"budget": 1.5},
+      "effects": [{"type": "budget", "amount": -1.5}]}
+   ]},
+
+  {"id": "shakeout", "title": "ShakeOut drill day", "weight": 0.7,
+   "text": "It's the national earthquake drill, and the comms team wants the monitoring centre front and centre.",
+   "options": [
+     {"label": "Go all in", "hint": "Adds a Comms task 'ShakeOut drill comms'. Trust +4.",
+      "effects": [{"type": "spawn_task", "task": "shakeout_comms", "count": 1}, {"type": "rating", "amount": 4}]},
+     {"label": "Keep it low-key", "hint": "Trust +1.", "effects": [{"type": "rating", "amount": 1}]}
+   ]},
+
+  {"id": "data_request", "title": "Research data request", "weight": 0.8,
+   "text": "A university group wants a big waveform and catalogue extract for a paper, and will acknowledge the centre.",
+   "options": [
+     {"label": "Pull the data", "hint": "Adds a Systems task 'Research data request'. +$2k, trust +1.",
+      "effects": [{"type": "spawn_task", "task": "data_request", "count": 1}, {"type": "budget", "amount": 2}, {"type": "rating", "amount": 1}]},
+     {"label": "Point them at the public data", "hint": "Nothing happens.", "effects": []}
+   ]},
+
+  {"id": "pacific_partner", "title": "Call from a Pacific partner", "weight": 0.7,
+   "text": "A partner agency in the Pacific is struggling to locate a regional quake and asks for help.",
+   "options": [
+     {"label": "Lend a hand", "hint": "Adds a Seismic task 'Help a Pacific partner'. Trust +3.",
+      "effects": [{"type": "spawn_task", "task": "regional_assist", "count": 1}, {"type": "rating", "amount": 3}]},
+     {"label": "Too busy today", "hint": "Trust -1.", "effects": [{"type": "rating", "amount": -1}]}
+   ]},
+
+  {"id": "delegation", "title": "Delegation visit", "weight": 0.7,
+   "text": "An overseas delegation is touring the centre this afternoon and wants to meet the analysts.",
+   "options": [
+     {"label": "Roll out the red carpet", "hint": "Best Comms analyst on shift away for 2 h. Trust +5.",
+      "requires": {"on_shift_min": 2},
+      "effects": [{"type": "away", "pick": "best_skill", "skill": "comms", "hours": 2, "reason": "Delegation visit"}, {"type": "rating", "amount": 5}]},
+     {"label": "A quick wave from the doorway", "hint": "Trust +1.", "effects": [{"type": "rating", "amount": 1}]}
+   ]},
+
+  {"id": "server_patch", "title": "Critical security patch", "weight": 0.7,
+   "text": "IT needs the processing servers patched. They can do it right now, or leave it with you.",
+   "options": [
+     {"label": "Let IT do it now", "hint": "Everything 25% slower for 2 h.",
+      "effects": [{"type": "modifier", "hours": 2, "modifier": {"stat": "speed", "op": "mult", "value": 0.75}}]},
+     {"label": "We'll do it ourselves later", "hint": "Adds a Systems task 'Patch the processing servers'.",
+      "effects": [{"type": "spawn_task", "task": "server_patch", "count": 1}]}
+   ]},
+
+  {"id": "pager_glitch", "title": "Pager glitch", "weight": 0.6,
+   "text": "The paging system is dropping messages. Duty officers might not get a page first time.",
+   "options": [
+     {"label": "Fall back to the phone tree", "hint": "Paging duty officers takes 60% more work for 48 h.",
+      "effects": [{"type": "modifier", "hours": 48, "modifier": {"stat": "work", "op": "mult", "value": 1.6, "when": {"task_type": ["page_duty"]}}}]},
+     {"label": "Pay for an urgent fix", "hint": "Costs $2k.", "requires": {"budget": 2},
+      "effects": [{"type": "budget", "amount": -2}]}
+   ]},
+
+  {"id": "station_vandalism", "title": "Station vandalised", "weight": 0.7,
+   "text": "Someone has broken into a remote seismic site and walked off with the solar panels.",
+   "options": [
+     {"label": "Organise repairs now", "hint": "Adds 'Coordinate station repair' and 'Seismic station outage'.",
+      "effects": [{"type": "spawn_task", "task": "station_repair", "count": 1}, {"type": "spawn_task", "task": "station_outage", "count": 1}]},
+     {"label": "Leave it until next week", "hint": "Earthquake tasks have 15% more errors for 3 days (one station short).",
+      "effects": [{"type": "modifier", "hours": 72, "modifier": {"stat": "error", "op": "mult", "value": 1.15, "when": {"kind": "eq"}}}]}
+   ]},
+
+  {"id": "team_lunch", "title": "Team lunch", "weight": 0.8,
+   "text": "Someone suggests a shared lunch in the ops room to lift spirits after a hard week.",
+   "options": [
+     {"label": "Shout everyone lunch", "hint": "Costs $1k. Everyone on shift: fatigue -10, long-term fatigue -3.", "requires": {"budget": 1},
+      "effects": [{"type": "budget", "amount": -1}, {"type": "fatigue", "who": "on_shift", "amount": -10}, {"type": "ltf", "who": "on_shift", "amount": -3}]},
+     {"label": "Maybe next week", "hint": "Nothing happens.", "effects": []}
+   ]},
+
+  {"id": "wellbeing", "title": "Wellbeing check-in", "weight": 0.7,
+   "text": "HR offers a wellbeing session for whoever on shift looks the most worn out.",
+   "options": [
+     {"label": "Send them along", "hint": "Most tired analyst on shift: long-term fatigue -8, away for 1 h.",
+      "requires": {"on_shift_min": 2},
+      "effects": [{"type": "ltf", "who": "most_fatigued", "amount": -8}, {"type": "away", "pick": "most_fatigued", "hours": 1, "reason": "Wellbeing session"}]},
+     {"label": "Not today", "hint": "Nothing happens.", "effects": []}
+   ]},
+
+  {"id": "contractor_offer", "title": "An old colleague offers a hand", "weight": 0.6,
+   "text": "A former analyst, now freelancing, offers to work the rest of this shift for a fee.",
+   "options": [
+     {"label": "Hire them for the shift", "hint": "Costs $2k. A skilled contractor joins until the end of the shift.", "requires": {"budget": 2},
+      "effects": [{"type": "budget", "amount": -2},
+                  {"type": "temp_gha", "name": "Former analyst", "skills": {"seismic": 4, "tsunami": 3, "comms": 3, "volcano": 2, "landslide": 2, "systems": 3}}]},
+     {"label": "No thanks", "hint": "Nothing happens.", "effects": []}
+   ]},
+
+  {"id": "aftershock_forecast", "title": "Aftershock forecast request", "weight": 0.7,
+   "text": "Emergency management want an updated aftershock forecast for recent activity, by this afternoon.",
+   "options": [
+     {"label": "Prepare it", "hint": "Adds a Seismic task 'Update aftershock forecast'. Trust +3.",
+      "effects": [{"type": "spawn_task", "task": "aftershock_forecast", "count": 1}, {"type": "rating", "amount": 3}]},
+     {"label": "Send last week's numbers", "hint": "Trust -2.", "effects": [{"type": "rating", "amount": -2}]}
+   ]}
+]

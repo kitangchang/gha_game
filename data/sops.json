@@ -1,0 +1,76 @@
+{
+  "_doc_dart": "The DART Trigger SOP has no magnitude triggers: it starts when a DART buoy is set off by a nearby quake and no other SOP is running (see dart.json). A task with 'repeat' and 'every_minutes' is added several times, each copy appearing that many minutes after the previous one (the first after every_minutes).",
+  "_doc": "Regions use lon 0-360. A region of 'elsewhere' matches anything outside the named regions. Task 'requires' may name 'prelim', 'confirm' or another task type in the same event. visible: 'locked' = shown greyed out until its requirements are done; 'on_unlock' = hidden until then.",
+
+  "regions": {
+    "local":    {"name": "Local",    "lat": [-47.5, -34.0], "lon": [166.0, 179.0]},
+    "kermadec": {"name": "Kermadec", "lat": [-33.0, -25.0], "lon": [177.0, 191.0]}
+  },
+
+  "task_types": {
+    "page_duty":        {"name": "Page duty officers",      "skill": "comms",   "work": 6,  "complexity": 1, "deadline": 20, "importance": 3.0},
+    "assess_tsunami":   {"name": "Assess tsunami threat",   "skill": "tsunami", "work": 15, "complexity": 4, "deadline": 30, "importance": 6.0},
+    "send_eat":         {"name": "Send EAT to NEMA",        "skill": "comms",   "work": 8, "complexity": 2, "deadline": 20, "importance": 6.0},
+    "reassess_tsunami": {"name": "Reassess tsunami threat", "skill": "tsunami", "work": 20, "complexity": 4, "deadline": 45, "importance": 4.0},
+    "send_eat2":        {"name": "Send EAT2 to NEMA",       "skill": "comms",   "work": 8, "complexity": 2, "deadline": 20, "importance": 4.0},
+    "activate_tep":     {"name": "Activate TEP",            "skill": "tsunami", "work": 10, "complexity": 2, "deadline": 30, "importance": 5.0},
+    "public_comms":     {"name": "Prepare public comms",    "skill": "comms",   "work": 25, "complexity": 3, "deadline": 60, "importance": 3.0},
+    "assess_dart":      {"name": "Assess DART signals",     "skill": "tsunami", "work": 12, "complexity": 3, "deadline": 30, "importance": 3.5},
+    "check_dart":       {"name": "Check DART data",         "skill": "tsunami", "work": 4,  "complexity": 2, "deadline": 45, "importance": 0.9}
+  },
+
+  "sops": [
+    {"id": "local_tsunami", "name": "Local Source Tsunami", "short": "LOCAL TSUNAMI", "color": [170, 140, 240],
+     "triggers": [{"region": "local", "min_mag": 6.0, "max_depth": 100}],
+     "prelim_deadline": 25, "confirm_deadline": 75,
+     "tasks": [
+       {"type": "page_duty"},
+       {"type": "assess_tsunami",   "requires": ["prelim"],                "visible": "locked"},
+       {"type": "send_eat",         "requires": ["assess_tsunami"],        "visible": "on_unlock"},
+       {"type": "reassess_tsunami", "requires": ["confirm"],               "visible": "locked"},
+       {"type": "send_eat2",        "requires": ["reassess_tsunami"],      "visible": "on_unlock"},
+       {"type": "activate_tep",     "requires": ["page_duty", "prelim"],   "visible": "locked"}
+     ]},
+
+    {"id": "kermadec_tsunami", "name": "Kermadec Source Tsunami", "short": "KERMADEC TSUNAMI", "color": [140, 160, 240],
+     "triggers": [{"region": "kermadec", "min_mag": 6.5, "max_depth": 150}],
+     "prelim_deadline": 25, "confirm_deadline": 75,
+     "tasks": [
+       {"type": "page_duty"},
+       {"type": "assess_tsunami",   "requires": ["prelim"],                "visible": "locked"},
+       {"type": "send_eat",         "requires": ["assess_tsunami"],        "visible": "on_unlock"},
+       {"type": "reassess_tsunami", "requires": ["confirm"],               "visible": "locked"},
+       {"type": "send_eat2",        "requires": ["reassess_tsunami"],      "visible": "on_unlock"},
+       {"type": "activate_tep",     "requires": ["page_duty", "prelim"],   "visible": "locked"}
+     ]},
+
+    {"id": "distant_tsunami", "name": "Regional/Distant Source Tsunami", "short": "DISTANT TSUNAMI", "color": [120, 180, 230],
+     "triggers": [{"region": "elsewhere", "min_mag": 7.5, "max_depth": 150}],
+     "prelim_deadline": 30, "confirm_deadline": 90,
+     "tasks": [
+       {"type": "page_duty"},
+       {"type": "assess_tsunami",   "requires": ["prelim"],                "visible": "locked"},
+       {"type": "send_eat",         "requires": ["assess_tsunami"],        "visible": "on_unlock"},
+       {"type": "reassess_tsunami", "requires": ["confirm"],               "visible": "locked"},
+       {"type": "send_eat2",        "requires": ["reassess_tsunami"],      "visible": "on_unlock"},
+       {"type": "activate_tep",     "requires": ["page_duty", "prelim"],   "visible": "locked"}
+     ]},
+
+    {"id": "dart_trigger", "name": "DART Trigger", "short": "DART", "color": [70, 196, 226],
+     "triggers": [],
+     "tasks": [
+       {"type": "page_duty"},
+       {"type": "assess_dart"},
+       {"type": "check_dart", "repeat": 6, "every_minutes": 60, "visible": "on_unlock"}
+     ]},
+
+    {"id": "significant", "name": "Significant Interest", "short": "SIGNIFICANT", "color": [230, 150, 210],
+     "triggers": [{"region": "local", "min_mag": 4.0},
+                  {"region": "local", "min_mag": 3.5, "max_depth": 15}],
+     "prelim_deadline": 30, "confirm_deadline": 90,
+     "tasks": [
+       {"type": "page_duty"},
+       {"type": "public_comms", "requires": ["confirm"], "visible": "locked"}
+     ]}
+  ]
+}

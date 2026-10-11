@@ -1,0 +1,35 @@
+[
+  {"_doc": "Special weeks are decided when the run starts and are shown on the planning screen. difficulty_shift moves that week's catalogue percentiles. away_count analysts are unavailable for the whole week. spawn_daily adds a task each day."},
+
+  {"id": "swarm_season", "name": "Swarm Season", "weight": 1.0,
+   "desc": "Elevated activity forecast. Busier days, but funding +20%.",
+   "difficulty_shift": 0.15, "payout_mult": 1.2},
+
+  {"id": "conference", "name": "Conference Week", "weight": 1.0,
+   "desc": "Two analysts are presenting at a conference and are away all week.",
+   "away_count": 2},
+
+  {"id": "server_migration", "name": "Server Migration", "weight": 0.8,
+   "desc": "Everything runs 12% slower while the servers move.",
+   "modifiers": [{"stat": "speed", "op": "mult", "value": 0.88}]},
+
+  {"id": "media_spotlight", "name": "Media Spotlight", "weight": 0.8,
+   "desc": "A documentary crew is filming. Trust losses x1.5, funding +40%.",
+   "modifiers": [{"stat": "rating_loss", "op": "mult", "value": 1.5}], "payout_mult": 1.4},
+
+  {"id": "quiet_week", "name": "Quiet Week", "weight": 0.8,
+   "desc": "Activity forecast is low. A chance to rest people.",
+   "difficulty_shift": -0.18},
+
+  {"id": "flu_season", "name": "Flu Season", "weight": 0.8,
+   "desc": "Something is going around. Sick calls x3.",
+   "modifiers": [{"stat": "sick_chance", "op": "mult", "value": 3.0}]},
+
+  {"id": "budget_review", "name": "Budget Review", "weight": 0.6,
+   "desc": "Finance is watching. Funding -20%, shop prices -15%.",
+   "payout_mult": 0.8, "modifiers": [{"stat": "shop_price", "op": "mult", "value": 0.85}]},
+
+  {"id": "tsunami_exercise", "name": "Tsunami Exercise", "weight": 0.7,
+   "desc": "A national tsunami exercise is running. One exercise inject arrives each day. Trust +5 at the end of the week.",
+   "spawn_daily": {"task": "exercise_inject", "at": "11:00"}, "end_rating": 5}
+]

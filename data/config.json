@@ -1,0 +1,220 @@
+{
+  "_doc": "Main balance file. Times are in GAME minutes unless the key says otherwise. Money is in $k.",
+  "title": "Seismic Shift",
+  "subtitle": "A GeoHazard Analyst shift-management roguelike",
+
+  "display": {
+    "_doc": "The game is laid out for 1920x1080 and scales to any window. F11 switches between fullscreen and a window.",
+    "start_fullscreen": true
+  },
+
+  "auto_assign": {
+    "_doc": "Auto-assign (the AUTO switch on the shift screen). horizon_minutes: modes other than 'fastest' and 'balanced' avoid stacking more than this much work on one analyst while someone else has room. check_every_minutes: how often (game minutes) the inbox is re-checked.",
+    "default_mode": "balanced",
+    "horizon_minutes": 120,
+    "check_every_minutes": 1.0
+  },
+
+  "time": {
+    "_doc": "day_length_seconds = real seconds for one 24 h game day at 1x speed.",
+    "day_length_seconds": 150,
+    "day_start_hour": 6,
+    "speed_options": [0.5, 1, 2, 4],
+    "default_speed_index": 1,
+    "handover_minutes": 10,
+    "pause_on_sop": true,
+    "pause_on_week_start": true
+  },
+
+  "shifts": [
+    {"_doc": "Shifts in order from the start of the game day (day_start_hour). fatigue_mult scales fatigue gain, ltf_mult long-term fatigue per shift."},
+    {"key": "morning", "name": "Morning", "start_offset_hours": 0,  "hours": 8, "fatigue_mult": 1.1, "ltf_mult": 1.0, "color": [242, 196, 88]},
+    {"key": "late",    "name": "Late",    "start_offset_hours": 8,  "hours": 8, "fatigue_mult": 1.0, "ltf_mult": 1.0, "color": [240, 140, 80]},
+    {"key": "night",   "name": "Night",   "start_offset_hours": 16, "hours": 8, "fatigue_mult": 1.4, "ltf_mult": 1.3, "color": [128, 140, 240]}
+  ],
+
+  "roster": {
+    "_doc": "Teams and their rotation. Each team follows rotation_cycle (one entry per day: a shift key or 'off'); team n is team_start_days[n] days into the cycle on the first day of the run. With the defaults exactly one team works each shift.",
+    "teams": [
+      {"key": "blue",   "name": "Blue",   "color": [76, 142, 245]},
+      {"key": "green",  "name": "Green",  "color": [88, 196, 110]},
+      {"key": "red",    "name": "Red",    "color": [230, 82, 82]},
+      {"key": "purple", "name": "Purple", "color": [168, 112, 236]},
+      {"key": "gold",   "name": "Gold",   "color": [238, 190, 60]}
+    ],
+    "rotation_cycle": ["morning", "morning", "late", "late", "night", "night", "off", "off", "off", "off"],
+    "team_start_days": [0, 2, 4, 6, 8],
+    "bench_color": [150, 156, 168],
+    "leave_color": [120, 200, 150]
+  },
+
+  "run": {
+    "lengths": [
+      {"key": "short",    "name": "Short",    "weeks": 4},
+      {"key": "standard", "name": "Standard", "weeks": 8},
+      {"key": "long",     "name": "Long",     "weeks": 12}
+    ],
+    "start_rating": 70,
+    "max_rating": 100,
+    "lose_rating": 0,
+    "start_budget": 12.0,
+    "start_team_size": 10,
+    "desks": 4,
+    "max_desks": 6,
+    "max_consumables": 3,
+    "call_in_cost": 1.0,
+    "call_in_arrive_minutes": 30,
+    "call_in_ltf": 3.0
+  },
+
+  "difficulty": {
+    "_doc": "Each day of the run is picked from the catalogue by workload percentile. The target percentile ramps from start to end across the run, with a smaller ramp inside each week.",
+    "start_percentile": 0.20,
+    "end_percentile": 0.9,
+    "within_week_ramp": 0.12,
+    "noise": 0.08,
+    "pick_window": 0.04,
+    "boss_final_day": true,
+    "max_target_percentile": 0.97,
+    "boss_percentile": 0.95,
+    "boss_max_percentile": 0.995,
+    "max_events_per_day": 220,
+    "event_volume_scale": 1.0,
+    "volume_scale_max_mag": 2.5,
+    "bau_rate_min": 0.85,
+    "bau_rate_max": 1.4,
+    "expectation_growth_per_week": 0.06
+  },
+
+  "catalog": {
+    "_doc": "Drop a CSV (e.g. archive.csv from eq_stats or a GeoNet quakesearch export) into data/catalog/. Without one, a synthetic NZ catalogue is generated. Catalogue times are UTC; nz_daylight_saving converts them to NZ time (NZST/NZDT). Set it to false to use a fixed utc_offset_hours instead.",
+    "folder": "data/catalog",
+    "nz_daylight_saving": true,
+    "utc_offset_hours": 12,
+    "min_events_per_day": 8,
+    "synthetic_years": 3,
+    "synthetic_seed": 20261010,
+    "synthetic_background_per_day": 56
+  },
+
+  "balance": {
+    "work_scale": 1.0
+  },
+
+  "eq": {
+    "_doc": "work = minutes for a skill-3, fresh analyst. Events above two_stage_above get a prelim + confirm (confirm locked until the prelim is done).",
+    "skill": "seismic",
+    "two_stage_above": 2.7,
+    "prelim_work_frac": 0.3,
+    "confirm_work_frac": 0.6,
+    "confirm_deadline_mult": 4.0,
+    "display_noise_initial": 1.0,
+    "display_noise_prelim": 0.2,
+    "tiers": [
+      {"min_mag": -9.0, "complexity": 1, "work": 16, "deadline": 720, "importance": 0.03},
+      {"min_mag": 2.0,  "complexity": 2, "work": 22, "deadline": 480, "importance": 0.08},
+      {"min_mag": 2.7,  "complexity": 2, "work": 30, "deadline": 150, "importance": 0.4},
+      {"min_mag": 3.5,  "complexity": 3, "work": 36, "deadline": 90,  "importance": 0.9},
+      {"min_mag": 4.5,  "complexity": 4, "work": 44, "deadline": 45,  "importance": 1.8},
+      {"min_mag": 5.5,  "complexity": 5, "work": 54, "deadline": 30,  "importance": 3.0},
+      {"min_mag": 6.5,  "complexity": 5, "work": 64, "deadline": 25,  "importance": 4.5}
+    ],
+    "regions": {
+      "local":     {"importance": 1.0,  "deadline": 1.0, "work": 1.0},
+      "kermadec":  {"importance": 0.5,  "deadline": 1.5, "work": 1.1},
+      "elsewhere": {"importance": 0.35, "deadline": 2.0, "work": 0.9}
+    },
+    "shallow_depth_km": 40,
+    "shallow_importance_mult": 1.25
+  },
+
+  "skill_model": {
+    "_doc": "speed = 1 + speed_per_level * (level - 3) * (cw_base + cw_per * complexity). error = error_base_per_complexity * complexity * error_skill_base^(3 - level).",
+    "min_level": 1,
+    "max_level": 5,
+    "speed_per_level": 0.18,
+    "cw_base": 0.6,
+    "cw_per": 0.2,
+    "min_speed": 0.25,
+    "error_base_per_complexity": 0.012,
+    "error_skill_base": 1.6,
+    "error_max": 0.75,
+    "xp_per_complexity": 0.25,
+    "xp_to_next": [20, 45, 90, 160]
+  },
+
+  "fatigue": {
+    "_doc": "Short-term fatigue 0-100. Builds on shift, recovers off shift, can't recover below long_term * floor_from_ltf.",
+    "gain_idle_per_hour": 3.0,
+    "gain_working_per_hour": 8.0,
+    "recovery_per_hour": 5.0,
+    "floor_from_ltf": 0.35,
+    "speed_penalty_at_max": 0.45,
+    "error_mult_at_max": 2.5,
+    "start_min": 5,
+    "start_max": 25
+  },
+
+  "long_term": {
+    "_doc": "Long-term fatigue 0-100. Added at the end of each shift worked; only a week of leave reduces it. Reaching burnout_level means the analyst resigns.",
+    "per_shift_base": 1.6,
+    "per_shift_busy": 1.9,
+    "double_shift_mult": 1.6,
+    "leave_recovery": 60,
+    "warn_level": 75,
+    "burnout_level": 100,
+    "start_min": 0,
+    "start_max": 30
+  },
+
+  "sick": {
+    "base_chance_per_person_shift": 0.011,
+    "ltf_divisor": 40,
+    "staffing_task": {"name": "Find staffing solution", "skill": "any", "work": 25, "complexity": 2, "importance": 2.0}
+  },
+
+  "rating": {
+    "_doc": "Public trust. Errors cost importance * error_penalty. Overdue tasks cost importance * miss_penalty once, then drain until capped at importance * overdue_cap_mult. All overdue drain together is capped per game hour.",
+    "error_penalty": 3.0,
+    "prelim_error_mult": 0.6,
+    "miss_penalty": 1.0,
+    "overdue_drain_per_hour": 0.6,
+    "overdue_cap_mult": 2.5,
+    "overdue_drain_cap_per_hour": 2.0,
+    "ontime_bonus": 0.10,
+    "unmanned_shift_penalty": 4.0,
+    "unmanned_drain_per_hour": 0.4
+  },
+
+  "economy": {
+    "base_grant": 21.0,
+    "performance_bonus_max": 8.0,
+    "trust_bonus_max": 4.0,
+    "salary_base": 0.7,
+    "salary_per_skill_point": 0.085,
+    "salary_good_trait": 0.25,
+    "salary_bad_trait": -0.2,
+    "salary_balanced_trait": 0.05,
+    "hire_fee_weeks": 1.5,
+    "reroll_cost": 1.0,
+    "reroll_cost_step": 1.0,
+    "relic_costs": {"common": 4, "uncommon": 7, "rare": 11, "legendary": 16},
+    "rarity_weights": {"common": 55, "uncommon": 30, "rare": 12, "legendary": 3},
+    "shop_slots": {"hires": 3, "relics": 3, "consumables": 3, "training": 2}
+  },
+
+  "centre": {
+    "_doc": "Centre (meta) progression, kept per save slot across runs. level_xp[n] = total XP needed for level n+1. XP per run: per_week for each week completed, per_sop for each SOP event handled, per_task for each task done, plus win_per_week x the run length and win_trust x final trust if you finish the season. Items in relics/consumables/training.json with an unlock_level above the centre level don't appear in the shop.",
+    "level_xp": [0, 150, 400, 750, 1200, 1750, 2400, 3150, 4000, 5000],
+    "xp": {"per_week": 25, "per_sop": 6, "per_task": 0.02, "win_per_week": 40, "win_trust": 1.0},
+    "slots": 3
+  },
+
+  "events": {
+    "special_week_chance": 0.35,
+    "special_week_first_week": 2,
+    "random_event_days_min": 2,
+    "random_event_days_max": 3,
+    "random_event_hours": [8, 21]
+  }
+}

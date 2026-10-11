@@ -1,0 +1,12 @@
+[
+  {"_doc": "Training is bought in the shop and applied to one analyst. effect: skill | ltf | remove_bad_trait | add_trait. (Long-term fatigue is meant to drop only with leave, so no ltf training ships by default.)"},
+
+  {"id": "train_seismic",   "name": "Seismology Workshop",       "cost": 4.0, "effect": "skill", "skill": "seismic",   "amount": 1, "desc": "+1 Seismic for one analyst."},
+  {"id": "train_tsunami",   "name": "Tsunami Modelling Course",  "cost": 4.0, "effect": "skill", "skill": "tsunami",   "amount": 1, "desc": "+1 Tsunami for one analyst."},
+  {"id": "train_comms",     "name": "Media & Comms Training",    "cost": 3.5, "effect": "skill", "skill": "comms",     "amount": 1, "desc": "+1 Comms for one analyst."},
+  {"id": "train_volcano",   "name": "Volcano Field Trip",        "cost": 3.5, "effect": "skill", "skill": "volcano",   "amount": 1, "desc": "+1 Volcano for one analyst."},
+  {"id": "train_landslide", "name": "Landslide Response Course", "cost": 3.5, "effect": "skill", "skill": "landslide", "amount": 1, "desc": "+1 Landslide for one analyst."},
+  {"id": "train_systems",   "name": "Python for Monitoring",     "cost": 3.5, "effect": "skill", "skill": "systems",   "amount": 1, "desc": "+1 Systems for one analyst."},
+  {"id": "habit_coaching", "unlock_level": 3,  "name": "Habit Coaching",            "cost": 5.0, "effect": "remove_bad_trait", "desc": "Remove one negative trait from an analyst."},
+  {"id": "leadership", "unlock_level": 6,      "name": "Leadership Course",         "cost": 6.0, "effect": "add_trait", "trait": "mentor", "desc": "One analyst becomes a Mentor."}
+]

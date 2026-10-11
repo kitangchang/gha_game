@@ -1,0 +1,21 @@
+{
+  "_doc": "Fictional analyst names. Female analysts get a name from 'female' or 'neutral', male analysts from 'male' or 'neutral'; surnames from 'last'.",
+  "female": ["Aroha", "Mere", "Ngaio", "Anahera", "Tui", "Mele", "Losa", "Priya", "Mei", "Hana", "Yuki", "Olivia", "Charlotte", "Isla", "Amelia", "Harper", "Ella", "Ruby", "Sophie", "Grace", "Zoe", "Niamh", "Freya", "Aisha", "Kiri", "Ana", "Ivy", "Maya", "Indira", "Moana", "Leilani", "Sienna", "Emma", "Ava", "Madison", "Madisen"],
+  "male": ["Tama", "Hemi", "Wiremu", "Kahu", "Rangi", "Sione", "Tevita", "Arjun", "Wei", "Liam", "Jack", "Oliver", "Noah", "Mason", "Lucas", "Finn", "Ethan", "Leo", "Callum", "Rohan", "Tomasi", "Pita", "Theo", "Mateo", "Tane", "Nikau", "Hamish", "James", "Daniel", "Ben", "Michael", "Mike", "Tom"],
+  "neutral": ["Jun", "Manaia", "Sam", "Alex", "Jordan", "Riley", "Quinn"],
+  "last": ["Walker", "Ngata", "Te Rangi", "Patel", "Chen", "Kim", "Fifita", "Taufa", "Brown", "Wilson", "Thompson", "Tapsell", "Parata", "Harris", "Clarke", "Singh", "Nguyen", "Rewi", "Hughes", "Bennett", "Kaur", "Wong", "Lee", "Murphy", "Fraser", "Campbell", "Douglas", "Reid", "Morgan", "Tuhoe", "Herewini", "Faleolo", "Sato", "Park", "O'Connor", "Fitzgerald", "Russo", "Mendes", "Novak", "Lindqvist", "Okafor", "Haddad", "Rossi", "Kowalski", "MacLeod", "Pohatu", "Whaanga", "Tiakiwai", "Ellis", "Hart"],
+  "colors": [
+    [86, 180, 233],
+    [240, 168, 80],
+    [140, 205, 90],
+    [232, 98, 82],
+    [170, 140, 240],
+    [52, 199, 180],
+    [240, 200, 80],
+    [230, 130, 190],
+    [120, 160, 255],
+    [200, 160, 110],
+    [110, 210, 140],
+    [250, 140, 110]
+  ]
+}

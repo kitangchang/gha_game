@@ -1,0 +1,28 @@
+{
+  "_doc": "DART tsunami buoys (columns A-L on the ops room wall). A quake triggers a buoy when its magnitude is at least trigger.min_mag and the buoy is within radius_km = radius_km_at_min_mag * radius_mult_per_mag ^ (mag - min_mag) of the hypocentre (200 km at M5.5, ~320 km at M6, ~790 km at M7). The buoy goes into event mode (red column) after the seismic waves reach it (distance / wave_speed_km_per_min) and stays there for event_mode_hours. lon is 0-360. POSITIONS ARE APPROXIMATE placeholders: edit them to match the real network.",
+
+  "trigger": {
+    "min_mag": 5.5,
+    "radius_km_at_min_mag": 200,
+    "radius_mult_per_mag": 2.5,
+    "wave_speed_km_per_min": 240,
+    "event_mode_hours": 4,
+    "sop": "dart_trigger",
+    "assess_task": "assess_dart"
+  },
+
+  "buoys": [
+    {"code": "A", "id": "NZA", "name": "Puysegur South",  "lat": -48.4, "lon": 164.6},
+    {"code": "B", "id": "NZB", "name": "Puysegur North",  "lat": -46.2, "lon": 165.4},
+    {"code": "C", "id": "NZC", "name": "Wairarapa",       "lat": -41.7, "lon": 177.2},
+    {"code": "D", "id": "NZD", "name": "Hawke Bay",       "lat": -40.1, "lon": 178.6},
+    {"code": "E", "id": "NZE", "name": "Gisborne",        "lat": -38.7, "lon": 179.4},
+    {"code": "F", "id": "NZF", "name": "East Cape",       "lat": -37.2, "lon": 179.9},
+    {"code": "G", "id": "NZG", "name": "Kermadec South",  "lat": -34.6, "lon": 181.2},
+    {"code": "H", "id": "NZH", "name": "Kermadec Central","lat": -31.8, "lon": 182.3},
+    {"code": "I", "id": "NZI", "name": "Raoul",           "lat": -29.0, "lon": 183.3},
+    {"code": "J", "id": "NZJ", "name": "Kermadec North",  "lat": -26.4, "lon": 184.2},
+    {"code": "K", "id": "NZK", "name": "Tonga South",     "lat": -23.6, "lon": 185.3},
+    {"code": "L", "id": "NZL", "name": "Tonga",           "lat": -20.6, "lon": 186.4}
+  ]
+}

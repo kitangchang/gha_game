@@ -1,0 +1,8 @@
+[
+  {"key": "seismic",   "abbr": "SEI", "name": "Seismic",   "color": [86, 180, 233],  "desc": "Locating earthquakes and reviewing magnitudes."},
+  {"key": "tsunami",   "abbr": "TSU", "name": "Tsunami",   "color": [52, 199, 180],  "desc": "Tsunami threat assessment, EATs and the TEP."},
+  {"key": "comms",     "abbr": "COM", "name": "Comms",     "color": [240, 168, 80],  "desc": "Paging, public comms, media and enquiries."},
+  {"key": "volcano",   "abbr": "VOL", "name": "Volcano",   "color": [232, 98, 82],   "desc": "Volcano monitoring, webcams and alert levels."},
+  {"key": "landslide", "abbr": "LAN", "name": "Landslide", "color": [196, 160, 110], "desc": "Landslide reports and rainfall watches."},
+  {"key": "systems",   "abbr": "SYS", "name": "Systems",   "color": [160, 150, 220], "desc": "Station outages, data gaps and tooling."}
+]
