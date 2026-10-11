@@ -11,6 +11,7 @@ Prototype: everything is meant to be tuned. Almost every number lives in `data/*
 ## Running it
 
 ```
+extract data/catalog/archive.7z
 pip install -r requirements.txt      # pygame-ce (plain pygame 2.1+ also works)
 python main.py
 ```
