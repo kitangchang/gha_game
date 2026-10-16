@@ -1,25 +1,25 @@
 [
-  {"_doc": "Special weeks are decided when the run starts and are shown on the planning screen. difficulty_shift moves that week's catalogue percentiles. away_count analysts are unavailable for the whole week. spawn_daily adds a task each day."},
+  {"_doc": "Special weeks are decided when the run starts and are shown on the planning screen. difficulty_shift moves that week's catalogue percentiles; difficulty_mult scales them (Quiet Week: 0.8 = days at 80% of the usual percentile). Boss days still get their boost. \"final_week\": false keeps a special week out of the run's last week. away_count analysts are unavailable for the whole week. spawn_daily adds a task each day."},
 
   {"id": "swarm_season", "name": "Swarm Season", "weight": 1.0,
    "desc": "Elevated activity forecast. Busier days, but funding +20%.",
    "difficulty_shift": 0.15, "payout_mult": 1.2},
 
-  {"id": "conference", "name": "Conference Week", "weight": 1.0,
+  {"id": "conference", "name": "GSNZ Conference Week", "weight": 1.0,
    "desc": "Two analysts are presenting at a conference and are away all week.",
    "away_count": 2},
 
   {"id": "server_migration", "name": "Server Migration", "weight": 0.8,
-   "desc": "Everything runs 12% slower while the servers move.",
-   "modifiers": [{"stat": "speed", "op": "mult", "value": 0.88}]},
+   "desc": "Everything runs 15% slower while the servers move.",
+   "modifiers": [{"stat": "speed", "op": "mult", "value": 0.85}]},
 
   {"id": "media_spotlight", "name": "Media Spotlight", "weight": 0.8,
    "desc": "A documentary crew is filming. Trust losses x1.5, funding +40%.",
    "modifiers": [{"stat": "rating_loss", "op": "mult", "value": 1.5}], "payout_mult": 1.4},
 
   {"id": "quiet_week", "name": "Quiet Week", "weight": 0.8,
-   "desc": "Activity forecast is low. A chance to rest people.",
-   "difficulty_shift": -0.18},
+   "desc": "Activity forecast is lower than usual. A chance to rest people.",
+   "difficulty_mult": 0.8, "final_week": false},
 
   {"id": "flu_season", "name": "Flu Season", "weight": 0.8,
    "desc": "Something is going around. Sick calls x3.",

@@ -199,10 +199,14 @@ def build_sop_checklist(run, data, ev: EqEvent, sop: dict, now: float) -> list:
 
 def build_bau_task(run, data, bau_id: str, now: float) -> Task:
     b = data.bau[bau_id]
+    meta = {}
+    if b.get("reward"):
+        # Contract work: pays out if finished on time without errors; lapses (no trust lost) if not done in time.
+        meta = {"reward": b["reward"], "expires": b.get("expires", True), "reward_text": b.get("reward_text", "")}
     return Task(id=run.new_id("task"), kind="bau", type=bau_id, name=b["name"], skill=b["skill"],
                 work=b["work"] * data.config["balance"]["work_scale"], complexity=b["complexity"],
                 importance=b["importance"], deadline=b["deadline"], created=now, available=now,
-                desc=b.get("desc", ""))
+                desc=b.get("desc", ""), meta=meta)
 
 
 def build_staffing_task(run, data, now: float, deadline: float, sick, slot: int, slot_label: str) -> Task:

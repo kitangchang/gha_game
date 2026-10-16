@@ -250,7 +250,7 @@ class CentreScene(Scene):
         counts = [(len(unlocked_ids(data, attr, level)), len(getattr(data, attr)), label)
                   for attr, label in (("relics", "tools"), ("consumables", "supplies"), ("training", "training"))]
         summary = " · ".join(f"{a} of {b} {label}" for a, b, label in counts)
-        draw_text(surf, f"In the shop now: {summary}", (rect.x + 110, rect.y + 17), 13, C.dim)
+        draw_text(surf, f"Unlocked: {summary}", (rect.x + 110, rect.y + 17), 13, C.dim)
         icons = get_icons()
         table = self.data.config["centre"]["level_xp"]
         track = unlock_track(data)
@@ -278,8 +278,10 @@ class CentreScene(Scene):
                 col = item_colour(data, cat, iid) if got else C.faint
                 draw_text(surf, item_name(data, cat, iid), (cell.x + isz + 10, cell.centery - 16), 13, col, "semibold",
                           max_width=cell.width - isz - 14)
-                draw_text(surf, {"tools": "tool", "supplies": "supply"}.get(cat, cat), (cell.x + isz + 10, cell.centery + 3),
-                          11, C.faint)
+                kind = {"tools": "tool", "supplies": "supply"}.get(cat, cat)
+                if cat == "tools" and data.relics[iid]["rarity"] == "boss":
+                    kind = "boss reward"
+                draw_text(surf, kind, (cell.x + isz + 10, cell.centery + 3), 11, C.faint)
                 if cell.collidepoint(mouse):
                     lines = item_lines(data, cat, iid)
                     if not got:

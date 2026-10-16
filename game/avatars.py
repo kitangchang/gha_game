@@ -7,6 +7,7 @@ actual images (ui/avatars.py).
 """
 from __future__ import annotations
 
+import fnmatch
 import json
 import random
 
@@ -97,6 +98,33 @@ def piece_fits(file: str, gender: str = "") -> bool:
     return True
 
 
+def _matches(rule_value, chosen) -> bool:
+    """Does one part of an "exclude" rule match what was picked? Layers are matched
+    by file name patterns ("afro*.png", "m_*"); palettes by colour index (0 = first)."""
+    if chosen is None:
+        return False
+    patterns = rule_value if isinstance(rule_value, list) else [rule_value]
+    for pat in patterns:
+        if isinstance(pat, int):
+            if chosen == pat:
+                return True
+        elif isinstance(chosen, str) and fnmatch.fnmatch(chosen.lower(), str(pat).lower()):
+            return True
+    return False
+
+
+def allowed(rules: list, picked: dict, key: str, value) -> bool:
+    """False if picking `value` for `key` (a layer or palette name) would complete an
+    exclude rule together with what's already been picked."""
+    for rule in rules:
+        if key not in rule or not _matches(rule[key], value):
+            continue
+        others = [k for k in rule if k != key]
+        if others and all(k in picked and _matches(rule[k], picked[k]) for k in others):
+            return False
+    return True
+
+
 def random_avatar(rng: random.Random, gender: str = "") -> dict:
     """Pick a piece (and tint) for every layer that has art. Uses a private RNG
     seeded from rng, so adding art never changes the rest of a run."""
@@ -105,9 +133,12 @@ def random_avatar(rng: random.Random, gender: str = "") -> dict:
     pieces = scan()
     avatar = {}
     chosen: dict = {}            # one colour per palette, so skin, nose and ears all match
+    rules = [r for r in manifest.get("exclude", []) if isinstance(r, dict)]
+    picked: dict = {}            # layer -> file, palette -> colour index, for the exclude rules
     for layer in manifest["layers"]:
         name = layer["name"]
         files = [f for f in pieces.get(name, []) if piece_fits(f, gender)]
+        files = [f for f in files if allowed(rules, picked, name, f)] or files
         roll_none = local.random()
         pick = local.random()
         tint_pick = local.random()
@@ -119,10 +150,23 @@ def random_avatar(rng: random.Random, gender: str = "") -> dict:
         if not layer.get("required") and roll_none < chance:
             avatar[name] = None
             continue
+        file = files[int(pick * len(files)) % len(files)]
+        picked[name] = file
         tint = None
         palette = layer.get("tint")
         if palette and palette != "team":
             colours = manifest.get("palettes", {}).get(palette) or [[255, 255, 255]]
-            tint = chosen.setdefault(palette, list(colours[int(tint_pick * len(colours)) % len(colours)]))
-        avatar[name] = {"file": files[int(pick * len(files)) % len(files)], "tint": tint}
+            if palette not in chosen:
+                ok = [i for i in range(len(colours)) if allowed(rules, picked, palette, i)] or list(range(len(colours)))
+                idx = ok[int(tint_pick * len(ok)) % len(ok)]
+                chosen[palette] = list(colours[idx])
+                picked[palette] = idx
+                # A small chance of a two-colour gradient (top colour -> bottom colour)
+                grad = float((manifest.get("gradients") or {}).get(palette, 0.0))
+                if grad > 0 and len(colours) > 1 and local.random() < grad:
+                    others = [i for i in range(len(colours)) if list(colours[i]) != list(colours[idx])]
+                    if others:
+                        chosen[palette] = [list(colours[idx]), list(colours[local.choice(others)])]
+            tint = chosen[palette]
+        avatar[name] = {"file": file, "tint": tint}
     return avatar

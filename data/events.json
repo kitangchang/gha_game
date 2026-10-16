@@ -4,10 +4,10 @@
   {"id": "ministry_briefing", "title": "The Ministry wants a briefing", "weight": 1.0,
    "text": "The Minister's office has asked for an in-person briefing on recent seismic activity. Today.",
    "options": [
-     {"label": "Send your best communicator", "hint": "Best Comms analyst on shift away for 3 h. Trust +6.",
+     {"label": "Send your best communicator", "hint": "Best Comms analyst on shift away for 4 h. Trust +6.",
       "requires": {"on_shift_min": 2},
-      "effects": [{"type": "away", "pick": "best_skill", "skill": "comms", "hours": 3, "reason": "Ministry briefing"}, {"type": "rating", "amount": 6}]},
-     {"label": "Send slides instead", "hint": "Adds a 'Prepare ministry briefing' task. Trust +2.",
+      "effects": [{"type": "away", "pick": "best_skill", "skill": "comms", "hours": 4, "reason": "Ministry briefing"}, {"type": "rating", "amount": 6}]},
+     {"label": "Send slides instead", "hint": "Adds a 'Prepare ministry briefing' task. Trust +1.",
       "effects": [{"type": "spawn_task", "task": "ministry_briefing_prep", "count": 1}, {"type": "rating", "amount": 2}]},
      {"label": "Politely decline", "hint": "Trust -3.",
       "effects": [{"type": "rating", "amount": -3}]}
@@ -21,7 +21,7 @@
       "effects": [{"type": "away", "pick": "random", "hours": 1.5, "reason": "School tour"}, {"type": "rating", "amount": 3},
                   {"type": "chance", "p": 0.4, "success": [{"type": "flag", "key": "graduate_in_shop", "value": true}],
                    "success_text": "One of the students asks how to become a GHA. Look out for them in the shop.",
-                   "failure_text": "The students loved the helicorders."}]},
+                   "failure_text": "The students loved the NGMC."}]},
      {"label": "Reschedule", "hint": "Trust -1.",
       "effects": [{"type": "rating", "amount": -1}]}
    ]},
@@ -73,18 +73,18 @@
   {"id": "storm_outages", "title": "Storm takes out stations", "weight": 0.9,
    "text": "A storm front has knocked several remote stations offline.",
    "options": [
-     {"label": "Handle it in-house", "hint": "Adds 3 'Seismic station outage' tasks.",
-      "effects": [{"type": "spawn_task", "task": "station_outage", "count": 3}]},
-     {"label": "Call the field contractor", "hint": "Costs $2k. Adds 1 'Coordinate station repair' task.", "requires": {"budget": 2},
+     {"label": "Handle it in-house", "hint": "Adds 5 'Seismic station outage' tasks.",
+      "effects": [{"type": "spawn_task", "task": "station_outage", "count": 5}]},
+     {"label": "Call the field contractor", "hint": "Costs $1k. Adds 1 'Coordinate station repair' task.", "requires": {"budget": 1},
       "effects": [{"type": "budget", "amount": -2}, {"type": "spawn_task", "task": "station_repair", "count": 1}]}
    ]},
 
   {"id": "consultancy", "title": "Research team needs a hand", "weight": 0.8,
    "text": "A research group will pay for an analyst's time to help relocate an old earthquake sequence.",
    "options": [
-     {"label": "Lend them someone", "hint": "Least tired analyst on shift away for 3 h. +$4k.",
+     {"label": "Lend them someone", "hint": "Least tired analyst on shift away for 5 h. +$4k.",
       "requires": {"on_shift_min": 2},
-      "effects": [{"type": "away", "pick": "least_fatigued", "hours": 3, "reason": "Research consultancy"}, {"type": "budget", "amount": 4}]},
+      "effects": [{"type": "away", "pick": "least_fatigued", "hours": 5, "reason": "Research consultancy"}, {"type": "budget", "amount": 4}]},
      {"label": "We're too busy", "hint": "Nothing happens.", "effects": []}
    ]},
 
@@ -107,10 +107,12 @@
   {"id": "software_update", "title": "Mandatory software update", "weight": 0.7,
    "text": "IT says the analysis software needs an update. It will be slow while it installs, but faster afterwards.",
    "options": [
-     {"label": "Update now", "hint": "Everything 20% slower for 4 h, then earthquake tasks 10% faster for 3 days.",
-      "effects": [{"type": "modifier", "hours": 4, "modifier": {"stat": "speed", "op": "mult", "value": 0.8}},
+     {"label": "Update now", "hint": "Everything 60% slower for 4 h, then earthquake tasks 10% faster for 3 days.",
+      "effects": [{"type": "modifier", "hours": 6, "modifier": {"stat": "speed", "op": "mult", "value": 0.4}},
                   {"type": "modifier", "hours": 72, "modifier": {"stat": "speed", "op": "mult", "value": 1.1, "when": {"kind": "eq"}}}]},
-     {"label": "Postpone", "hint": "Nothing happens.", "effects": []}
+     {"label": "Postpone", "hint": "Chance apps will crash.",
+      "effects": [{"type": "chance", "p": 0.6, "success": [{"type": "spawn_task", "task": "app_crash", "count": 3}],
+                   "success_text": "Unupdated apps crashed almost immediately.", "failure_text": "Everything seems ok... for now."}]}
    ]},
 
   {"id": "aircon", "title": "Air conditioning broken", "weight": 0.7,
@@ -148,20 +150,20 @@
   {"id": "fire_drill", "title": "Fire drill", "weight": 0.8,
    "text": "The fire wardens are clearing the building for a drill, and they mean everyone, ops room included.",
    "options": [
-     {"label": "Everyone out", "hint": "Everyone on shift is away for 30 minutes.",
-      "effects": [{"type": "away", "pick": "on_shift", "hours": 0.5, "reason": "Fire drill"}]},
+     {"label": "Everyone out", "hint": "Everyone on shift is away for 1 hour.",
+      "effects": [{"type": "away", "pick": "on_shift", "hours": 1.0, "reason": "Fire drill"}]},
      {"label": "Leave one analyst at the desks", "hint": "A random analyst on shift is away for 30 minutes. Trust -1 (the wardens complain).",
       "requires": {"on_shift_min": 2},
       "effects": [{"type": "away", "pick": "random", "hours": 0.5, "reason": "Fire drill"}, {"type": "rating", "amount": -1}]}
    ]},
 
   {"id": "coffee_broken", "title": "The coffee machine has died", "weight": 0.9,
-   "text": "A sad gurgle, a puff of steam, and the ops room coffee machine is no more.",
+   "text": "A sad gurgle, a puff of steam, and the coffee machine is no more.",
    "options": [
-     {"label": "Live without it", "hint": "Everyone tires 20% faster for 24 h.",
-      "effects": [{"type": "modifier", "hours": 24, "modifier": {"stat": "fatigue_gain", "op": "mult", "value": 1.2}}]},
-     {"label": "Buy a new one today", "hint": "Costs $1.5k.", "requires": {"budget": 1.5},
-      "effects": [{"type": "budget", "amount": -1.5}]}
+     {"label": "Live without it", "hint": "Everyone tires 30% faster for 24 h.",
+      "effects": [{"type": "modifier", "hours": 24, "modifier": {"stat": "fatigue_gain", "op": "mult", "value": 1.3}}]},
+     {"label": "Buy a new one today", "hint": "Costs $1.0k.", "requires": {"budget": 1.0},
+      "effects": [{"type": "budget", "amount": -1.0}]}
    ]},
 
   {"id": "shakeout", "title": "ShakeOut drill day", "weight": 0.7,
@@ -178,6 +180,14 @@
      {"label": "Pull the data", "hint": "Adds a Systems task 'Research data request'. +$2k, trust +1.",
       "effects": [{"type": "spawn_task", "task": "data_request", "count": 1}, {"type": "budget", "amount": 2}, {"type": "rating", "amount": 1}]},
      {"label": "Point them at the public data", "hint": "Nothing happens.", "effects": []}
+   ]},
+
+  {"id": "webcam_analysis_request", "title": "Webcam analysis request", "weight": 0.6,
+   "text": "The on duty VDO has requested someone analyses the last few months camera images.",
+   "options": [
+     {"label": "Analyse the data", "hint": "Adds a Volcano task 'Volcano webcam analysis', with the promise of more funding. +$2k.",
+      "effects": [{"type": "spawn_task", "task": "webcam_analysis", "count": 1}, {"type": "budget", "amount": 2}]},
+     {"label": "Politely decline", "hint": "Trust -3.", "effects": [{"type": "rating", "amount": -3}]}
    ]},
 
   {"id": "pacific_partner", "title": "Call from a Pacific partner", "weight": 0.7,
@@ -200,8 +210,8 @@
   {"id": "server_patch", "title": "Critical security patch", "weight": 0.7,
    "text": "IT needs the processing servers patched. They can do it right now, or leave it with you.",
    "options": [
-     {"label": "Let IT do it now", "hint": "Everything 25% slower for 2 h.",
-      "effects": [{"type": "modifier", "hours": 2, "modifier": {"stat": "speed", "op": "mult", "value": 0.75}}]},
+     {"label": "Let IT do it now", "hint": "Everything 40% slower for 4 h.",
+      "effects": [{"type": "modifier", "hours": 4, "modifier": {"stat": "speed", "op": "mult", "value": 0.6}}]},
      {"label": "We'll do it ourselves later", "hint": "Adds a Systems task 'Patch the processing servers'.",
       "effects": [{"type": "spawn_task", "task": "server_patch", "count": 1}]}
    ]},
@@ -227,25 +237,25 @@
   {"id": "team_lunch", "title": "Team lunch", "weight": 0.8,
    "text": "Someone suggests a shared lunch in the ops room to lift spirits after a hard week.",
    "options": [
-     {"label": "Shout everyone lunch", "hint": "Costs $1k. Everyone on shift: fatigue -10, long-term fatigue -3.", "requires": {"budget": 1},
-      "effects": [{"type": "budget", "amount": -1}, {"type": "fatigue", "who": "on_shift", "amount": -10}, {"type": "ltf", "who": "on_shift", "amount": -3}]},
+     {"label": "Shout everyone lunch", "hint": "Costs $0.5k. Everyone on shift: fatigue -10, long-term fatigue -3.", "requires": {"budget": 0.5},
+      "effects": [{"type": "budget", "amount": -0.5}, {"type": "fatigue", "who": "on_shift", "amount": -10}, {"type": "ltf", "who": "on_shift", "amount": -3}]},
      {"label": "Maybe next week", "hint": "Nothing happens.", "effects": []}
    ]},
 
   {"id": "wellbeing", "title": "Wellbeing check-in", "weight": 0.7,
    "text": "HR offers a wellbeing session for whoever on shift looks the most worn out.",
    "options": [
-     {"label": "Send them along", "hint": "Most tired analyst on shift: long-term fatigue -8, away for 1 h.",
+     {"label": "Send them along", "hint": "Most tired analyst on shift: long-term fatigue -8, away for 3 h.",
       "requires": {"on_shift_min": 2},
-      "effects": [{"type": "ltf", "who": "most_fatigued", "amount": -8}, {"type": "away", "pick": "most_fatigued", "hours": 1, "reason": "Wellbeing session"}]},
+      "effects": [{"type": "ltf", "who": "most_fatigued", "amount": -8}, {"type": "away", "pick": "most_fatigued", "hours": 3, "reason": "Wellbeing session"}]},
      {"label": "Not today", "hint": "Nothing happens.", "effects": []}
    ]},
 
-  {"id": "contractor_offer", "title": "An old colleague offers a hand", "weight": 0.6,
-   "text": "A former analyst, now freelancing, offers to work the rest of this shift for a fee.",
+  {"id": "contractor_offer", "title": "An old colleague offers a hand", "weight": 0.5,
+   "text": "A former analyst, now freelancing, offers to work the rest of this shift for a small fee.",
    "options": [
-     {"label": "Hire them for the shift", "hint": "Costs $2k. A skilled contractor joins until the end of the shift.", "requires": {"budget": 2},
-      "effects": [{"type": "budget", "amount": -2},
+     {"label": "Hire them for the shift", "hint": "Costs $0.5k. A skilled contractor joins until the end of the shift.", "requires": {"budget": 0.5},
+      "effects": [{"type": "budget", "amount": -0.5},
                   {"type": "temp_gha", "name": "Former analyst", "skills": {"seismic": 4, "tsunami": 3, "comms": 3, "volcano": 2, "landslide": 2, "systems": 3}}]},
      {"label": "No thanks", "hint": "Nothing happens.", "effects": []}
    ]},

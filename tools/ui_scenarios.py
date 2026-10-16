@@ -47,6 +47,7 @@ def main():
     profile.xp = 820          # level 4, to show some unlocks
     app.profile = profile
     run = new_run(app.data, app.catalog, seed=4242, length_key="short", unlock_level=4)
+    run.flags.pop("start_reward", None)
     profile.run = run
     save.save_profile(profile)
     from ui.scenes.planning import PlanningScene
@@ -175,6 +176,7 @@ def main():
     # Victory screen with a level-up.
     from ui.scenes.summary import VictoryScene
     run2 = new_run(app.data, app.catalog, seed=7, length_key="short", unlock_level=4)
+    run2.flags.pop("start_reward", None)
     run2.week = run2.weeks_total
     run2.phase = "won"
     run2.rating = 81.0
@@ -187,6 +189,7 @@ def main():
 
     # Planning with people on leave, a custom grid and a hover tooltip on a team strip.
     run3 = new_run(app.data, app.catalog, seed=99, length_key="short")
+    run3.flags.pop("start_reward", None)
     tired = sorted(run3.active_ghas(), key=lambda g: -g.ltf)[:2]
     for g in tired:
         g.ltf = 88.0
@@ -209,6 +212,7 @@ def main():
     from game.run import finish_week, start_week
     from ui.scenes.summary import SummaryScene
     run4 = new_run(app.data, app.catalog, seed=11, length_key="short")
+    run4.flags.pop("start_reward", None)
     eng4 = start_week(app.data, run4)
     bot4 = Bot(app.data, attention=10)
     while not eng4.week_done and not eng4.game_over:
@@ -220,8 +224,35 @@ def main():
     s["level_ups"] = s["level_ups"][:2] or ["Aroha Ngata: Seismic 4", "Ben Carter: Tsunami 3"]
     s["leave"] = ["Mere Walker: long-term fatigue 74 → 14"]
     s["burnouts"] = ["Sam Patel"]
-    app.change(SummaryScene(app, run4, s))
+    summary_scene = SummaryScene(app, run4, s)
+    app.change(summary_scene)
     shot(app, "s12_summary_notes")
+
+    # Boss reward picker (week 1 had a Sunday boss day), then planning after taking one.
+    print("boss reward options:", run4.flags.get("boss_reward"))
+    if summary_scene.reward.pending:
+        summary_scene.advance()
+        card = summary_scene.reward.cards[0]
+        pygame.mouse.set_pos(card.center)
+        shot(app, "s12b_boss_reward")
+        summary_scene.reward.choose(summary_scene.reward.options[0])
+        print("tools now:", run4.relics)
+    # Planning: day alerts, the boss day tooltip, tag tally and a tag-scaling tool.
+    run4.relics += ["coffee_machine"]
+    run4.consumables = ["energy_drink", "coffee_run"]
+    plan_scene = app.scene if isinstance(app.scene, PlanningScene) else PlanningScene(app, run4)
+    app.change(plan_scene)
+    frame(app)
+    sun = plan_scene.day_rects[6]
+    pygame.mouse.set_pos((sun.x + 20, sun.y + 20))
+    shot(app, "s12c_planning_boss_tooltip")
+    run4.relics += ["aftershock_model"]
+    pygame.mouse.set_pos((plan_scene.day_rects[5].x + 20, plan_scene.day_rects[5].y + 20))
+    shot(app, "s12d_planning_forecast")
+    # Hover the coffee machine in the tool strip for its tag rundown.
+    idx = run4.relics.index("coffee_machine")
+    pygame.mouse.set_pos((76 + idx * 32, 89))
+    shot(app, "s12e_tool_tooltip")
 
     # Slots with a used centre.
     from ui.scenes.slots import SlotScene

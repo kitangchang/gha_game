@@ -21,6 +21,19 @@ def init_bank() -> "AvatarBank":
     return _BANK
 
 
+def _tint_key(tint):
+    """Hashable tint: (r, g, b), or ((r, g, b), (r, g, b)) for a top-to-bottom gradient."""
+    if not tint:
+        return None
+    if isinstance(tint[0], (list, tuple)):
+        return tuple(tuple(c[:3]) for c in tint[:2])
+    return tuple(tint[:3])
+
+
+def is_gradient(tint) -> bool:
+    return bool(tint) and isinstance(tint[0], (list, tuple))
+
+
 class AvatarBank:
     MAX_CACHE = 800
 
@@ -119,7 +132,9 @@ class AvatarBank:
                 continue
             cond = layer.get("condition")
             if cond:
-                entry = {}          # condition layers belong to everyone; shown only when the condition holds
+                # condition layers belong to everyone and show only when the condition holds;
+                # a chosen piece (e.g. from the avatar builder) is kept, otherwise one is picked
+                entry = entry if isinstance(entry, dict) else {}
             if entry is None:
                 continue
             if entry == "missing":
@@ -144,19 +159,51 @@ class AvatarBank:
                 palette_tint.setdefault(mode, tint)
             if "_fixed" in file:
                 tint = None
-            parts.append((name, file, tuple(tint) if tint else None, cond))
+            parts.append((name, file, _tint_key(tint), cond))
         return tuple(parts)
 
-    def _tinted(self, key, img, tint):
+    def _span(self, name, file) -> tuple:
+        """Top and bottom of a piece (front and back half together), for gradients."""
+        key = ("span", name, file)
+        span = self._tints.get(key)
+        if span is None:
+            rects = [img.get_bounding_rect() for img in (self.images.get((name, file)), self.backs.get((name, file)))
+                     if img is not None]
+            rects = [r for r in rects if r.height > 0]
+            if rects:
+                top, bottom = min(r.top for r in rects), max(r.bottom for r in rects)
+            else:
+                top, bottom = 0, self.canvas[1]
+            span = self._tints[key] = (top, bottom)
+        return span
+
+    def _tinted(self, key, img, tint, span=None):
         if tint is None:
             return img
         cache_key = (key, tint)
         out = self._tints.get(cache_key)
         if out is None:
             out = img.copy()
-            out.fill(tuple(tint[:3]) + (255,), special_flags=pygame.BLEND_RGBA_MULT)
+            if is_gradient(tint):
+                out.blit(self._gradient(tint[0], tint[1], out.get_size(), span), (0, 0),
+                         special_flags=pygame.BLEND_RGBA_MULT)
+            else:
+                out.fill(tuple(tint[:3]) + (255,), special_flags=pygame.BLEND_RGBA_MULT)
             self._tints[cache_key] = out
         return out
+
+    @staticmethod
+    def _gradient(top, bottom, size, span=None) -> pygame.Surface:
+        """Colour 1 at the top of the piece fading to colour 2 at its bottom
+        (span = (top row, bottom row); the whole canvas if not given)."""
+        w, h = size
+        y0, y1 = span if span else (0, h)
+        grad = pygame.Surface((w, h), pygame.SRCALPHA)
+        for y in range(h):
+            t = min(1.0, max(0.0, (y - y0) / max(1, y1 - 1 - y0)))
+            col = tuple(int(round(top[i] + (bottom[i] - top[i]) * t)) for i in range(3)) + (255,)
+            pygame.draw.line(grad, col, (0, y), (w - 1, y))
+        return grad
 
     def compose(self, g, team_color=None, tired: bool = False) -> pygame.Surface | None:
         if not self.has_art:
@@ -175,9 +222,9 @@ class AvatarBank:
         for name, file, tint, _ in parts:
             back = self.backs.get((name, file))
             if back is not None:
-                surf.blit(self._tinted((name, file, "back"), back, tint), (0, 0))
+                surf.blit(self._tinted((name, file, "back"), back, tint, self._span(name, file)), (0, 0))
         for name, file, tint, _ in parts:
-            surf.blit(self._tinted((name, file), self.images[(name, file)], tint), (0, 0))
+            surf.blit(self._tinted((name, file), self.images[(name, file)], tint, self._span(name, file)), (0, 0))
         if tired and "tired" in self.overlays:
             surf.blit(self.overlays["tired"], (0, 0))
         self._composed[key] = surf

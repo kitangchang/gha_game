@@ -1,13 +1,15 @@
 """Window, main loop and scene switching."""
 from __future__ import annotations
 
+import json
+import os
 import threading
 import traceback
 
 import pygame
 
 from game.catalog import load_catalog
-from game.data import get_data
+from game.data import ROOT, get_data
 
 from .theme import C, H, W
 from .widgets import TOOLTIP
@@ -30,17 +32,34 @@ class Scene:
         pass
 
 
+SETTINGS_FILE = ROOT / "settings.json"
+RESOLUTIONS = [(1280, 720), (1600, 900), (1920, 1080), (2560, 1080), (2560, 1440), (3440, 1440), (3840, 2160)]
+
+
+def load_settings(config: dict) -> dict:
+    """Player display settings (settings.json next to main.py), falling back to config.json."""
+    out = {"fullscreen": bool(config.get("display", {}).get("start_fullscreen", True)),
+           "resolution": [W, H], "smooth": True}
+    try:
+        with open(SETTINGS_FILE, encoding="utf-8") as fh:
+            out.update(json.load(fh))
+    except (OSError, ValueError):
+        pass
+    return out
+
+
 class App:
     def __init__(self, headless: bool = False):
         pygame.display.init()
         pygame.font.init()
         self.data = get_data()
-        flags = 0
-        if not headless:
-            flags = pygame.SCALED | pygame.RESIZABLE
-            if self.data.config.get("display", {}).get("start_fullscreen", True):
-                flags |= pygame.FULLSCREEN
-        self.screen = pygame.display.set_mode((W, H), flags)
+        self.headless = headless
+        self.settings = load_settings(self.data.config)
+        self.smooth_at_start = self.settings.get("smooth", True)
+        if headless:
+            self.screen = pygame.display.set_mode((W, H))
+        else:
+            self.apply_display(first=True)
         pygame.display.set_caption("Seismic Shift")
         pygame.key.set_repeat(350, 40)
         self.clock = pygame.time.Clock()
@@ -50,6 +69,9 @@ class App:
         from .webcams import init_webcams
         self.avatars = init_bank()
         self.icons = init_icons(self.data)
+        if not headless:
+            from game.art_check import summary_lines
+            print("\n".join(summary_lines(self.data)))
         self.webcams = init_webcams()
         self.rich = init_rich(self.data)
         self.profile = None             # the centre (save slot) being played
@@ -64,6 +86,52 @@ class App:
         from .scenes.title import TitleScene
         self.scene: Scene = TitleScene(self)
         self.scene.on_enter()
+
+    # ------------------------------------------------------------- display
+    def apply_display(self, first: bool = False):
+        """Create the window (first=True) or adjust it to self.settings. The game always
+        draws at 1920x1080 and SDL scales it to the window, with black bars if the shape
+        differs. The window is only ever created once: calling set_mode again on a
+        scaled window can crash SDL on Windows, so later changes go through the window."""
+        st = self.settings
+        if first:
+            # SDL reads this when it creates the scaled texture: 1 = smooth, 0 = sharp pixels
+            os.environ["SDL_RENDER_SCALE_QUALITY"] = "1" if st.get("smooth", True) else "0"
+            flags = pygame.SCALED | pygame.RESIZABLE
+            if st.get("fullscreen"):
+                flags |= pygame.FULLSCREEN
+            self.screen = pygame.display.set_mode((W, H), flags)
+            if st.get("fullscreen"):
+                return
+        try:
+            is_full = pygame.display.is_fullscreen() if hasattr(pygame.display, "is_fullscreen") else False
+            if bool(st.get("fullscreen")) != bool(is_full):
+                pygame.display.toggle_fullscreen()
+            if st.get("fullscreen") or not hasattr(pygame, "Window"):
+                return
+            w, h = st.get("resolution", [W, H])
+            desk = pygame.display.get_desktop_sizes()[0]
+            if w > desk[0] or h > desk[1]:              # never bigger than the monitor
+                k = min(desk[0] / w, desk[1] / h) * 0.95
+                w, h = int(w * k), int(h * k)
+            win = pygame.Window.from_display_module()
+            win.size = (w, h)
+            win.position = pygame.WINDOWPOS_CENTERED
+        except Exception:  # resizing is a nicety; the game keeps running at its current size
+            traceback.print_exc()
+
+    def save_settings(self):
+        try:
+            with open(SETTINGS_FILE, "w", encoding="utf-8") as fh:
+                json.dump(self.settings, fh, indent=2)
+        except OSError:
+            pass
+
+    def set_display(self, **changes):
+        self.settings.update(changes)
+        self.save_settings()
+        if not self.headless:
+            self.apply_display()
 
     def _set_status(self, text: str):
         self.catalog_status = text
@@ -89,7 +157,7 @@ class App:
             if event.type == pygame.QUIT:
                 self.running = False
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
-                pygame.display.toggle_fullscreen()
+                self.set_display(fullscreen=not self.settings.get("fullscreen"))
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_F5:
                 self.reload_art()
             else:

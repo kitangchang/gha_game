@@ -9,8 +9,9 @@ from game.util import fmt_money
 from ..app import Scene
 from ..icons import get_icons
 from ..richtext import get_rich
-from ..theme import C, H, W, trust_color
+from ..theme import RARITY, C, H, W, trust_color
 from ..widgets import TOOLTIP, Button, bar, draw_text, panel, pill
+from .boss_reward import BossReward
 from .common import draw_portrait, fatigue_color, group_label, group_of, skill_pill, team_color_of
 
 BOX_W, BOX_GAP = 580, 30
@@ -46,21 +47,38 @@ class SummaryScene(Scene):
         self.run = run
         self.s = summary
         final = run.phase == "won"
-        label = "See the season results  ▶" if final else f"Plan week {run.week + 1}  ▶"
-        self.button = Button((W // 2 - 190, H - 96, 380, 56), label, self.next, "primary", 18)
+        self.reward = BossReward(app, run, on_done=self.next)
+        if final:
+            label = "See the season results  ▶"
+        elif self.reward.pending:
+            label = "Choose your boss reward  ▶"
+        else:
+            label = f"Plan week {run.week + 1}  ▶"
+        self.button = Button((W // 2 - 190, H - 96, 380, 56), label, self.advance, "primary", 18)
 
-    def next(self):
+    def advance(self):
+        if self.reward.pending:
+            self.reward.show()
+        else:
+            self.next()
+
+    def next(self, message: str = ""):
         if self.run.phase == "won":
             self.app.change(VictoryScene(self.app, self.run))
         else:
             from .planning import PlanningScene
-            self.app.change(PlanningScene(self.app, self.run))
+            scene = PlanningScene(self.app, self.run)
+            if message:
+                scene.flash(message, C.good if message.startswith("New") else C.dim)
+            self.app.change(scene)
 
     def handle(self, event):
+        if self.reward.handle(event):
+            return
         if self.button.handle(event):
             return
         if event.type == pygame.KEYDOWN and event.key in (pygame.K_RETURN, pygame.K_SPACE):
-            self.next()
+            self.advance()
 
     def draw(self, surf):
         s = self.s
@@ -133,6 +151,8 @@ class SummaryScene(Scene):
         y = _row(surf, x, y, "Trust bonus", fmt_money(s["trust_bonus"]), inner)
         if abs(s["payout_mult"] - 1.0) > 1e-6:
             y = _row(surf, x, y, "Multiplier", f"×{s['payout_mult']:.2f}", inner)
+        if s.get("weekly_bonus", 0) > 0.005:
+            y = _row(surf, x, y, "Funding from tools", f"+{fmt_money(s['weekly_bonus'])}", inner, col=C.good)
         y = _row(surf, x, y, "Funding received", fmt_money(s["payout"]), inner, col=C.good)
         y = _row(surf, x, y, "Salaries", f"-{fmt_money(s['salaries'])}", inner, col=C.bad)
         if s["overtime"]:
@@ -144,7 +164,13 @@ class SummaryScene(Scene):
         y = _row(surf, x, y, "Budget now", fmt_money(s["budget_end"]), inner, col=C.gold, size=17)
         draw_text(surf, "Performance bonus = importance-weighted on-time rate, minus a penalty for errors.",
                   (x, boxes[2].bottom - 46), 11, C.faint, max_width=inner)
+        if self.reward.pending and not self.reward.open:
+            draw_text(surf, "You survived the boss day: a reward is waiting.", (W // 2, H - 128), 15,
+                      RARITY["boss"], "semibold", anchor="midtop")
         self.button.draw(surf, mouse)
+        if self.reward.open:
+            TOOLTIP.clear()
+            self.reward.draw(surf, mouse)
 
     def _condition(self, surf, x, y, bottom):
         """Who's worn out going into next week, worst first."""
@@ -217,7 +243,7 @@ class _RunEndScene(Scene):
             draw_text(surf, f"Level up! {res['old_level']} → {res['new_level']}", (x, y), 18, C.gold, "bold")
             y += 30
             if res["unlocks"]:
-                draw_text(surf, "NEW IN THE SHOP", (x, y), 11, C.faint, "bold")
+                draw_text(surf, "NEW UNLOCKS", (x, y), 11, C.faint, "bold")
                 y += 22
                 icons = get_icons()
                 from .centre import item_colour, item_lines, item_name

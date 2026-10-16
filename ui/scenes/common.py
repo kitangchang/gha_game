@@ -59,13 +59,16 @@ def group_label(data, group: str) -> str:
 
 
 # ---------------------------------------------------------------- portraits
-def draw_portrait(surf, center, radius: int, g, data, run=None, ring=None, dim: bool = False, team_color=None):
-    """Layered avatar in a circle, or an initials disc if there's no art."""
+def draw_portrait(surf, center, radius: int, g, data, run=None, ring=None, dim: bool = False, team_color=None,
+                  bg=None):
+    """Layered avatar in a circle, or an initials disc if there's no art. bg: the circle's
+    fill (defaults to a tint of the team colour); pass the colour behind it to hide the circle."""
     tcol = team_color if team_color is not None else (team_color_of(data, run, g) if data else None)
     bank = get_bank()
     img = None
     if bank is not None and bank.has_art:
-        bg = mix(tcol, C.panel, 0.7) if tcol else C.panel3
+        if bg is None:
+            bg = mix(tcol, C.panel, 0.7) if tcol else C.panel3
         img = bank.portrait(g, radius * 2, tcol, bank.is_tired(g), bg)
     cx, cy = int(center[0]), int(center[1])
     if img is None:
@@ -148,34 +151,177 @@ def gha_tooltip(g, data, extra: list | None = None, run=None) -> list:
     return lines
 
 
-def relic_lines(rid: str, data) -> list:
+# --------------------------------------------------------------------- tags
+STAT_WORDS = {"speed": "speed", "work": "work", "error": "errors", "fatigue_gain": "fatigue gain",
+              "fatigue_recovery": "fatigue recovery", "ltf_gain": "long-term fatigue", "sick_chance": "sick calls",
+              "xp": "XP", "rating_loss": "trust losses", "rating_gain": "trust gains", "payout": "funding",
+              "shop_price": "shop prices", "skill": "skill", "call_in_cost": "call-in cost",
+              "weekly_bonus": "weekly funding"}
+
+
+def tag_colour(data, tag: str):
+    t = getattr(data, "tags", {}).get(tag)
+    return t["color"] if t else C.text
+
+
+def tag_name(data, tag: str) -> str:
+    if tag == "any":
+        return "Any tag"
+    t = getattr(data, "tags", {}).get(tag)
+    return t["name"] if t else tag.title()
+
+
+def tag_chips(data, tags: list, size: int = 10) -> pygame.Surface:
+    """A row of small coloured tag pills, for tooltips and cards."""
+    imgs = [render(tag_name(data, t), size, C.bg, "bold") for t in tags]
+    h = max((i.get_height() for i in imgs), default=10) + 4
+    out = pygame.Surface((max(1, sum(i.get_width() + 14 for i in imgs)), h), pygame.SRCALPHA)
+    x = 0
+    for tag, img in zip(tags, imgs):
+        r = pygame.Rect(x, 0, img.get_width() + 10, h)
+        pygame.draw.rect(out, tag_colour(data, tag), r, border_radius=h // 2)
+        out.blit(img, (r.x + 5, 2))
+        x = r.right + 4
+    return out
+
+
+def tag_effect_text(m: dict, counts) -> str:
+    from game.tags import scaled_value
+    v = scaled_value(m, counts)
+    word = STAT_WORDS.get(m["stat"], m["stat"])
+    if m.get("op", "mult") == "add":
+        if m["stat"] == "weekly_bonus":
+            return f"+{fmt_money(v)} {word}"
+        return f"{v:+g} {word}"
+    pct = (v - 1.0) * 100.0
+    return f"{pct:+.1f}% {word}" if abs(pct) < 10 else f"{pct:+.0f}% {word}"
+
+
+def tag_value_total(m: dict, counts) -> float:
+    from game.tags import scaled_value
+    return scaled_value(m, counts)
+
+
+def tag_rundown(data, run, item: dict) -> list:
+    """For an item that scales with tags: how many you have, the effect right now and
+    where every tag comes from."""
+    from collections import Counter
+
+    from game.tags import ANY, scaling_tags, tag_sources, tag_total
+    tags = scaling_tags(item)
+    if not tags:
+        return []
+    if run is None:
+        return [("Gets stronger with every matching tag you own.", C.faint, 11)]
+    sources = tag_sources(data, run)
+    counts = {t: len(v) for t, v in sources.items()}
+    lines: list = [6]
+    for tag in tags:
+        n = tag_total(counts, tag)
+        effects = ", ".join(tag_effect_text(m, counts) for m in item.get("modifiers", []) if m.get("per_tag") == tag)
+        if tag == ANY:
+            lines.append((f"All tags: {n}, now {effects}", C.text, 12, "bold"))
+            srcs = [s for v in sources.values() for s in v]
+            kinds = Counter(kind for kind, _ in srcs)
+            words = {"tool": ("tool", "tools"), "supply": ("supply", "supplies"), "trait": ("trait", "traits")}
+            parts = [f"{kinds[k]} {words[k][kinds[k] != 1]}" for k in words if kinds[k]]
+            if parts:
+                lines.append(("From: " + ", ".join(parts) + ". Hover the tag tally for the full list.", C.faint, 11))
+        else:
+            copies = run.relics.count(item.get("id")) if item.get("repeatable") else 1
+            if copies > 1:
+                total = sum(tag_value_total(m, counts) for m in item.get("modifiers", []) if m.get("per_tag") == tag
+                            and m.get("op") == "add" and m["stat"] == "weekly_bonus") * copies
+                if total:
+                    effects += f" each, +{fmt_money(total)} in total"
+            lines.append((f"{tag_name(data, tag)} tags: {n}, now {effects}", tag_colour(data, tag), 12, "bold"))
+            srcs = sources.get(tag, [])
+            if srcs:
+                names = ", ".join(label for _, label in srcs[:12])
+                if len(srcs) > 12:
+                    names += f" and {len(srcs) - 12} more"
+                lines.append((f"From: {names}", C.faint, 11))
+        if not srcs:
+            lines.append(("None yet: tools, supplies and analyst traits can all carry tags.", C.faint, 11))
+    return lines
+
+
+ICON_TIP = 72          # size of the tool picture at the top of its tooltip
+
+
+def item_header(category: str, iid: str, name_text: str, name_col, sub_text: str) -> pygame.Surface | None:
+    """Tooltip header: the item's picture on the left, name and kind beside it.
+    category: tools, supplies or training (the assets/items/ folder)."""
+    from ..icons import get_icons
+    icons = get_icons()
+    if icons is None:
+        return None
+    name = render(name_text, 15, name_col, "bold")
+    sub = render(sub_text, 11, C.faint)
+    tw = max(name.get_width(), sub.get_width())
+    out = pygame.Surface((ICON_TIP + 12 + tw, ICON_TIP), pygame.SRCALPHA)
+    out.blit(icons.icon(category, iid, ICON_TIP), (0, 0))
+    ty = (ICON_TIP - name.get_height() - sub.get_height() - 2) // 2
+    out.blit(name, (ICON_TIP + 12, ty))
+    out.blit(sub, (ICON_TIP + 12, ty + name.get_height() + 2))
+    return out
+
+
+def _head(category, iid, name_text, name_col, sub_text, icon=True) -> list:
+    head = item_header(category, iid, name_text, name_col, sub_text) if icon else None
+    if head is not None:
+        return [head, 4]
+    return [(name_text, name_col, 14, "bold"), (sub_text, C.faint, 11)]
+
+
+def relic_lines(rid: str, data, run=None, icon: bool = True) -> list:
     r = data.relics[rid]
-    return [(r["name"], RARITY[r["rarity"]], 14, "bold"), (f"{r['rarity'].title()} tool", C.faint, 11),
-            (r["desc"], C.text, 13)]
+    rarity = "Boss tool (only from boss days)" if r["rarity"] == "boss" else f"{r['rarity'].title()} tool"
+    lines = _head("tools", rid, r["name"], RARITY.get(r["rarity"], C.text), rarity, icon)
+    if r.get("tags"):
+        lines.append(tag_chips(data, r["tags"]))
+    lines.append((r["desc"], C.text, 13))
+    if r.get("repeatable"):
+        n = run.relics.count(rid) if run is not None else 0
+        note = "Can be taken more than once." + (f" You have {n}, and each one counts." if n > 1 else "")
+        lines.append((note, C.faint, 11))
+    return lines + tag_rundown(data, run, r)
 
 
-def consumable_lines(cid: str, data) -> list:
+def consumable_lines(cid: str, data, icon: bool = True) -> list:
     c = data.consumables[cid]
     tgt = {"gha": "Click it, then click an analyst.", "task": "Click it, then click a task card.",
            "none": "Takes effect immediately."}[c.get("target", "none")]
-    return [(c["name"], C.supply, 14, "bold"), ("Supply · one use", C.faint, 11), (c["desc"], C.text, 13),
-            (tgt, C.faint, 11)]
+    lines = _head("supplies", cid, c["name"], C.supply, "Supply · one use", icon)
+    if c.get("tags"):
+        lines.append(tag_chips(data, c["tags"]))
+    return lines + [(c["desc"], C.text, 13), (tgt, C.faint, 11)]
 
 
-def training_lines(tid: str, data) -> list:
+def training_lines(tid: str, data, icon: bool = True) -> list:
     t = data.training[tid]
-    return [(t["name"], C.training, 14, "bold"), ("Training", C.faint, 11), (t["desc"], C.text, 13)]
+    lines = _head("training", tid, t["name"], C.training, "Training", icon)
+    if t.get("tags"):
+        lines.append(tag_chips(data, t["tags"]))
+    return lines + [(t["desc"], C.text, 13)]
 
 
 def trait_colour(data, tid: str):
-    return TRAIT_COLOURS.get(data.traits[tid].get("kind", "good"), C.good)
+    """Traits are coloured by their (first) tag; untagged ones by good/balanced/bad."""
+    t = data.traits[tid]
+    tags = t.get("tags") or []
+    if tags and tags[0] in getattr(data, "tags", {}):
+        return tag_colour(data, tags[0])
+    return TRAIT_COLOURS.get(t.get("kind", "good"), C.good)
 
 
 def trait_lines(tid: str, data) -> list:
     t = data.traits[tid]
     kind = t.get("kind", "good")
-    return [(t["name"], TRAIT_COLOURS.get(kind, C.good), 13, "bold"), (TRAIT_LABELS.get(kind, ""), C.faint, 11),
-            (t["desc"], C.text, 12)]
+    lines = [(t["name"], trait_colour(data, tid), 13, "bold"), (TRAIT_LABELS.get(kind, ""), C.faint, 11)]
+    if t.get("tags"):
+        lines.append(tag_chips(data, t["tags"]))
+    return lines + [(t["desc"], C.text, 12)]
 
 
 # ------------------------------------------------------------------ pieces
@@ -236,7 +382,7 @@ def draw_gha_chip(surf, rect, g, data, mouse, away: bool = False, note: str = ""
     if hover:
         pygame.draw.rect(surf, mix(tcol, C.white, 0.35), rect, 1, border_radius=8)
     rad = max(10, rect.height // 2 - 4)
-    draw_portrait(surf, (rect.x + 8 + rad, rect.centery), rad, g, data, run, dim=away, team_color=tcol)
+    draw_portrait(surf, (rect.x + 8 + rad, rect.centery), rad, g, data, run, dim=away, team_color=tcol, bg=base)
     x = rect.x + 16 + 2 * rad
     fw = 112 if wide else max(64, min(112, rect.width // 2 - 22))
     fx = rect.right - 10 - fw
@@ -253,33 +399,80 @@ def draw_gha_chip(surf, rect, g, data, mouse, away: bool = False, note: str = ""
     return hover
 
 
+def owned_tools(run, data) -> list:
+    """Owned tools in order, each listed once (repeatable tools can be owned several times)."""
+    out = []
+    for rid in run.relics:
+        if rid in data.relics and rid not in out:
+            out.append(rid)
+    return out
+
+
+def count_badge(surf, rect, n: int):
+    """A small 'x3' in the corner of a tool icon owned more than once."""
+    if n > 1:
+        img = render(f"x{n}", 10, C.white, "bold")
+        b = pygame.Rect(0, 0, img.get_width() + 6, img.get_height())
+        b.bottomright = (rect.right + 3, rect.bottom + 3)
+        pygame.draw.rect(surf, C.bg, b, border_radius=4)
+        surf.blit(img, (b.x + 3, b.y))
+
+
 def draw_tool_strip(surf, run, data, mouse, y: int, height: int = 34, right_text: str = "", right_lines=None):
-    """Slay-the-Spire style row of the tools a run owns, with tooltips."""
+    """Slay-the-Spire style row of the tools a run owns, with tooltips, and a tally
+    of the run's tags on the right."""
     from ..icons import get_icons
     from ..theme import W
     rect = pygame.Rect(0, y, W, height)
     pygame.draw.rect(surf, (15, 19, 26), rect)
     pygame.draw.line(surf, C.border, (0, rect.bottom - 1), (W, rect.bottom - 1))
-    draw_text(surf, "TOOLS", (16, rect.y + height // 2), 10, C.faint, "bold", anchor="midleft")
+    lab = draw_text(surf, "TOOLS", (16, rect.y + height // 2), 10, C.faint, "bold", anchor="midleft")
     icons = get_icons()
-    x = 66
+    x = lab.right + 12
     size = height - 8
-    owned = [rid for rid in run.relics if rid in data.relics]
+    owned = owned_tools(run, data)
     if not owned:
-        draw_text(surf, "None yet. Buy tools in the shop between weeks.", (x, rect.centery), 12, C.faint,
-                  anchor="midleft")
+        draw_text(surf, "None yet.", (x, rect.centery), 12, C.faint, anchor="midleft")
     for rid in owned:
         r = pygame.Rect(x, rect.y + 4, size, size)
         if icons is not None:
             icons.draw(surf, "tools", rid, r.topleft, size)
+        count_badge(surf, r, run.relics.count(rid))
         if r.collidepoint(mouse):
             pygame.draw.rect(surf, C.white, r.inflate(4, 4), 1, border_radius=6)
-            TOOLTIP.set(relic_lines(rid, data), 300)
+            TOOLTIP.set(relic_lines(rid, data, run), 340)
         x += size + 6
     if right_text:
         rr = draw_text(surf, right_text, (W - 16, rect.centery), 11, C.sop, "bold", anchor="midright")
         if right_lines and rr.collidepoint(mouse):
             TOOLTIP.set(right_lines, 320)
+    else:
+        draw_tag_tally(surf, run, data, mouse, W - 16, rect.centery)
+
+
+def draw_tag_tally(surf, run, data, mouse, right: int, cy: int):
+    """'TAGS  Caffeine 3  Night 2 …' right-aligned at (right, cy); hover a pill for its sources."""
+    from game.tags import tag_sources
+    sources = tag_sources(data, run)
+    order = [t for t in getattr(data, "tags", {}) if sources.get(t)]
+    x = right
+    for tag in reversed(order):
+        img = render(f"{tag_name(data, tag)} {len(sources[tag])}", 11, C.bg, "bold")
+        r = pygame.Rect(0, 0, img.get_width() + 12, img.get_height() + 4)
+        r.midright = (x, cy)
+        pygame.draw.rect(surf, tag_colour(data, tag), r, border_radius=r.height // 2)
+        surf.blit(img, (r.x + 6, r.y + 2))
+        if r.collidepoint(mouse):
+            pygame.draw.rect(surf, C.white, r.inflate(4, 4), 1, border_radius=r.height // 2 + 2)
+            t = data.tags[tag]
+            lines = [(f"{t['name']} tags: {len(sources[tag])}", t["color"], 14, "bold"), (t.get("desc", ""), C.dim, 12)]
+            lines += [(f"{label}  ·  {kind}", C.text, 12) for kind, label in sources[tag][:14]]
+            if len(sources[tag]) > 14:
+                lines.append((f"...and {len(sources[tag]) - 14} more", C.faint, 12))
+            TOOLTIP.set(lines, 320)
+        x = r.x - 6
+    if order:
+        draw_text(surf, "TAGS", (x - 4, cy), 10, C.faint, "bold", anchor="midright")
 
 
 def trust_bar(surf, rect, value: float, label: bool = True):

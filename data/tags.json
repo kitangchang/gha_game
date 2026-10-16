@@ -1,0 +1,22 @@
+[
+  {"_doc": "Tags group traits, tools and supplies into families. Tools with a modifier that has \"per_tag\" get stronger for every matching tag you have: on your tools, on the supplies in your cupboard and on your analysts' traits. color is used for trait pills and tag chips."},
+
+  {"id": "caffeine",  "name": "Caffeine",  "color": [210, 140, 75],
+   "desc": "Coffee, energy drinks, and the people who run on them."},
+  {"id": "night",     "name": "Night",     "color": [150, 125, 245],
+   "desc": "Night-shift people and night-shift kit."},
+  {"id": "wellbeing", "name": "Wellbeing", "color": [110, 210, 140],
+   "desc": "Looking after the team: rest, health, and comfort."},
+  {"id": "teamwork",  "name": "Teamwork",  "color": [240, 130, 190],
+   "desc": "Mentoring, sharing, and helping each other out."},
+  {"id": "tech",      "name": "Tech",      "color": [70, 205, 200],
+   "desc": "Automation, scripts, dashboards, and gadgets."},
+  {"id": "media",     "name": "Media",     "color": [245, 200, 80],
+   "desc": "Comms, press, and public-facing work."},
+  {"id": "science",   "name": "Science",   "color": [95, 155, 255],
+   "desc": "Seismology, volcanology, tsunami, and landslide know-how."},
+  {"id": "cims", "name": "CIMS", "color": [200, 225, 70],
+   "desc": "Coordinated Incident Management System: response & SOPs."},
+   {"id": "funding", "name": "Funding", "color": [90, 190, 70],
+   "desc": "Finance, budgets, and anything that brings money in."}
+]

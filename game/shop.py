@@ -38,7 +38,8 @@ def generate_shop(data, run, reroll_count: int = 0) -> dict:
 
     rarities = econ["rarity_weights"]
     level = getattr(run, "unlock_level", 99)
-    pool = [r for r in data.relics.values() if r["id"] not in run.relics and unlock_level(r) <= level]
+    pool = [r for r in data.relics.values()
+            if r["id"] not in run.relics and unlock_level(r) <= level and r["rarity"] != "boss"]
     relics = []
     for _ in range(slots["relics"] + int(spec.get("shop_extra_relic", 0))):
         if not pool:
@@ -58,7 +59,8 @@ def generate_shop(data, run, reroll_count: int = 0) -> dict:
                 for tid in train_ids[: slots["training"]]]
 
     return {"week": run.week, "hires": hires, "relics": relics, "consumables": consumables,
-            "training": training, "rerolls": reroll_count,
+            "training": training, "rerolls": reroll_count, "price_mult": mult,
+            "extra_relics": int(spec.get("shop_extra_relic", 0)),
             "reroll_cost": round(econ["reroll_cost"] + econ["reroll_cost_step"] * reroll_count, 1)}
 
 
@@ -91,7 +93,41 @@ def buy_relic(data, run, index: int) -> tuple:
         return False, "Not enough budget."
     run.relics.append(item["id"])
     item["sold"] = True
+    refresh_after_new_tool(data, run)
     return True, f"Bought {data.relics[item['id']]['name']}."
+
+
+def refresh_after_new_tool(data, run):
+    """A tool that changes the shop (Procurement Contact: lower prices, an extra
+    tool on offer) works straight away on the shop that's open, not just next week."""
+    sh = run.shop
+    if not sh:
+        return
+    new_mult = price_mult(data, run)
+    old_mult = sh.get("price_mult", new_mult)
+    if old_mult and abs(new_mult - old_mult) > 1e-9:
+        factor = new_mult / old_mult
+        for key in ("hires", "relics", "consumables", "training"):
+            for item in sh.get(key, []):
+                if not item["sold"]:
+                    item["cost"] = round(item["cost"] * factor, 1)
+    sh["price_mult"] = new_mult
+    extra = int(collect_specials(data, run.relics).get("shop_extra_relic", 0))
+    had = sh.get("extra_relics", extra)
+    if extra > had:
+        econ = data.config["economy"]
+        level = getattr(run, "unlock_level", 99)
+        offered = {o["id"] for o in sh["relics"]}
+        pool = [r for r in data.relics.values() if r["id"] not in run.relics and r["id"] not in offered
+                and unlock_level(r) <= level and r["rarity"] != "boss"]
+        for _ in range(extra - had):
+            if not pool:
+                break
+            r = weighted_choice(run.rng, pool, [econ["rarity_weights"].get(p["rarity"], 1) for p in pool])
+            pool.remove(r)
+            sh["relics"].append({"id": r["id"], "cost": round(econ["relic_costs"][r["rarity"]] * new_mult, 1),
+                                 "sold": False})
+    sh["extra_relics"] = max(had, extra)
 
 
 def buy_consumable(data, run, index: int) -> tuple:

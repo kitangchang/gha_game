@@ -199,7 +199,7 @@ def staffing_modal(scene, surf, mouse) -> list:
 def callin_modal(scene, surf, mouse) -> list:
     eng = scene.eng
     opts = eng.call_in_options()[:10]
-    cost = eng.cfg["run"]["call_in_cost"]
+    cost = eng.call_in_cost()
     height = 150 + len(opts) * 48 + 60
     rect = _card(surf, 780, height, "Call someone in", C.accent)
     free = None in eng.seats
@@ -246,9 +246,15 @@ def pause_menu(scene, surf, mouse) -> list:
 
 
 def banner(surf, title: str, sub: str, color=C.accent):
-    rect = pygame.Rect(0, 0, 700, 78)
-    rect.center = (W // 2, 520)
+    """Pause banner over the wall screens (clear of the desk cards), with a wrapped subtitle."""
+    from ..theme import Fonts
+    width = 700
+    rows = wrap(sub, 13, "regular", width - 40)
+    lh = Fonts.get(13).get_linesize()
+    rect = pygame.Rect(0, 0, width, 56 + lh * len(rows))
+    rect.midtop = (W // 2, 150)
     alpha_rect(surf, rect.inflate(12, 12), (0, 0, 0, 110), radius=14)
     panel(surf, rect, (20, 26, 36), color, radius=10, width=2)
-    draw_text(surf, title, (rect.centerx, rect.y + 14), 20, color, "bold", anchor="midtop")
-    draw_text(surf, sub, (rect.centerx, rect.y + 47), 13, C.dim, anchor="midtop", max_width=rect.width - 30)
+    draw_text(surf, title, (rect.centerx, rect.y + 12), 20, color, "bold", anchor="midtop")
+    for i, row in enumerate(rows):
+        draw_text(surf, row, (rect.centerx, rect.y + 44 + i * lh), 13, C.dim, anchor="midtop")

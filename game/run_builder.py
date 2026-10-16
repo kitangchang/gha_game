@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import random
 
+from .forecast import classify
 from .geo import describe, region_of
 from .models import DayPlan, WeekPlan
 from .tasks import estimate_event_work, sops_for
@@ -60,6 +61,9 @@ def _pick_day(rng, ranked, used, target, window):
 def _pick_boss(rng, ranked, used, boss_pct, boss_max):
     top = [d for d in ranked if boss_pct <= d.percentile <= boss_max and d.key not in used]
     with_sop = [d for d in top if d.sop_count > 0]
+    dramatic = [d for d in with_sop if classify(d.events)["kind"] in ("large", "swarm")]
+    if dramatic:
+        return rng.choice(dramatic)
     if with_sop:
         return rng.choice(with_sop)
     any_sop = [d for d in ranked if d.sop_count > 0 and d.key not in used]
@@ -101,6 +105,20 @@ def _bau_schedule(data, rng, rate_scale: float, special, weekday: int = 0) -> li
     return items
 
 
+def _pick_weekly_boss(rng, ranked, used, target, window):
+    """A hard day near the target, preferring a large quake or a swarm."""
+    w = window
+    while w < 0.6:
+        cands = [d for d in ranked if d.key not in used and abs(d.percentile - target) <= w]
+        dramatic = [d for d in cands if classify(d.events)["kind"] in ("large", "swarm")]
+        if dramatic:
+            return rng.choice(dramatic)
+        if len(cands) >= 6:
+            return rng.choice(cands)
+        w *= 2
+    return _pick_day(rng, ranked, used, target, window)
+
+
 def build_plan(data, catalog, rng: random.Random, weeks: int) -> list:
     score_days(data, catalog)
     diff = data.config["difficulty"]
@@ -115,18 +133,27 @@ def build_plan(data, catalog, rng: random.Random, weeks: int) -> list:
     for w in range(weeks):
         special = None
         if specials and w + 1 >= ev_cfg["special_week_first_week"] and rng.random() < ev_cfg["special_week_chance"]:
-            special = weighted_choice(rng, specials, [s.get("weight", 1.0) for s in specials])
+            pool = [s for s in specials if w < weeks - 1 or s.get("final_week", True)]
+            special = weighted_choice(rng, pool, [s.get("weight", 1.0) for s in pool]) if pool else None
         shift = special.get("difficulty_shift", 0.0) if special else 0.0
         week_base = lerp(diff["start_percentile"], diff["end_percentile"], w / max(1, weeks - 1))
         n_rand = rng.randint(ev_cfg["random_event_days_min"], ev_cfg["random_event_days_max"])
         rand_days = set(rng.sample(range(7), min(7, n_rand)))
         days = []
         for d in range(7):
-            target = clamp(week_base + diff["within_week_ramp"] * (d / 6.0 - 0.5)
-                           + rng.gauss(0, diff["noise"]) + shift, 0.01, diff.get("max_target_percentile", 0.95))
-            boss = diff.get("boss_final_day", True) and w == weeks - 1 and d == 6
-            if boss:
+            mult = float(special.get("difficulty_mult", 1.0)) if special else 1.0      # Quiet Week: 0.8
+            target = clamp((week_base + diff["within_week_ramp"] * (d / 6.0 - 0.5)
+                            + rng.gauss(0, diff["noise"])) * mult + shift,
+                           0.01, diff.get("max_target_percentile", 0.95))
+            final = diff.get("boss_final_day", True) and w == weeks - 1 and d == 6
+            weekly = diff.get("weekly_boss", True) and d == 6 and not final
+            boss = final or weekly
+            if final:
                 day = _pick_boss(rng, ranked, used, diff["boss_percentile"], diff.get("boss_max_percentile", 1.0))
+            elif weekly:
+                target = clamp(target + diff.get("weekly_boss_boost", 0.15), 0.01,
+                               diff.get("max_target_percentile", 0.95))
+                day = _pick_weekly_boss(rng, ranked, used, target, diff["pick_window"])
             else:
                 day = _pick_day(rng, ranked, used, target, diff["pick_window"])
             used.add(day.key)
@@ -161,7 +188,7 @@ def build_plan(data, catalog, rng: random.Random, weeks: int) -> list:
             days.append(DayPlan(
                 index=w * 7 + d, source=day.label, events=events,
                 bau=_bau_schedule(data, rng, rate_scale, special, d),
-                score=day.score, percentile=day.percentile, target=target, boss=boss,
+                score=day.score, percentile=day.percentile, target=target, boss=boss, final=final,
                 random_event_at=random_at, max_mag=day.max_mag, sop_count=day.sop_count,
             ))
         plan.append(WeekPlan(index=w, days=days, special=special["id"] if special else None))

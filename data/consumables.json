@@ -1,43 +1,47 @@
 [
   {"_doc": "Supplies are one-use items used during a shift from the top bar. target: none | gha | task. Effects use the same format as random events."},
 
-  {"id": "pizza_night", "name": "Pizza Night", "short": "Pizza", "cost": 2.0, "target": "none",
+  {"id": "pizza_night", "tags": ["wellbeing", "teamwork"], "name": "Pizza Night", "short": "Pizza", "cost": 1.0, "target": "none",
    "desc": "Everyone on shift: fatigue -25.",
    "effects": [{"type": "fatigue", "who": "on_shift", "amount": -25}]},
 
-  {"id": "energy_drink", "name": "Energy Drink", "short": "Energy", "cost": 1.5, "target": "gha",
-   "desc": "One analyst: fatigue -40, but long-term fatigue +3.",
-   "effects": [{"type": "fatigue", "who": "target", "amount": -40}, {"type": "ltf", "who": "target", "amount": 3}]},
+  {"id": "energy_drink", "tags": ["caffeine"], "name": "Energy Drink", "short": "Energy", "cost": 1.0, "target": "gha",
+   "desc": "One analyst: fatigue -50, but long-term fatigue +5.",
+   "effects": [{"type": "fatigue", "who": "target", "amount": -50}, {"type": "ltf", "who": "target", "amount": 5}]},
 
-  {"id": "call_favour", "unlock_level": 7, "name": "Call in a Favour", "short": "Favour", "cost": 3.0, "target": "task",
+  {"id": "call_favour", "tags": ["teamwork"], "unlock_level": 7, "name": "Call in a Favour", "short": "Favour", "cost": 1.0, "target": "task",
    "desc": "An external expert completes one task instantly, with no error.",
    "effects": [{"type": "complete_task"}]},
 
-  {"id": "media_statement", "name": "Media Statement", "short": "Statement", "cost": 2.5, "target": "none",
+  {"id": "media_statement", "tags": ["media"], "name": "Media Statement", "short": "Statement", "cost": 1.5, "target": "none",
    "desc": "Public trust +5.",
    "effects": [{"type": "rating", "amount": 5}]},
 
-  {"id": "contractor", "unlock_level": 5, "name": "Contract Seismologist", "short": "Contractor", "cost": 4.0, "target": "none",
+  {"id": "contractor", "tags": ["science"], "unlock_level": 5, "name": "Contract Seismologist", "short": "Contractor", "cost": 0.5, "target": "none",
    "desc": "A contractor (Seismic 4) sits at a free desk until the end of this shift.",
    "effects": [{"type": "temp_gha", "name": "Contractor", "skills": {"seismic": 4, "tsunami": 2, "comms": 2, "volcano": 1, "landslide": 1, "systems": 2}}]},
 
-  {"id": "focus_hour", "name": "Focus Hour", "short": "Focus", "cost": 2.0, "target": "none",
-   "desc": "All tasks 40% faster for the next 3 hours.",
-   "effects": [{"type": "modifier", "hours": 3, "modifier": {"stat": "speed", "op": "mult", "value": 1.4}}]},
+  {"id": "focus_hour", "tags": ["caffeine"], "name": "Focus Hour(s)", "short": "Focus", "cost": 1.0, "target": "none",
+   "desc": "All tasks 60% faster for the next 3 hours.",
+   "effects": [{"type": "modifier", "hours": 3, "modifier": {"stat": "speed", "op": "mult", "value": 1.6}}]},
 
-  {"id": "second_eyes", "unlock_level": 4, "name": "Second Pair of Eyes", "short": "2nd Eyes", "cost": 2.0, "target": "none",
-   "desc": "60% fewer errors for the next 4 hours.",
-   "effects": [{"type": "modifier", "hours": 4, "modifier": {"stat": "error", "op": "mult", "value": 0.4}}]},
+  {"id": "second_eyes", "tags": ["teamwork"], "unlock_level": 4, "name": "Second Pair of Eyes", "short": "2nd Eyes", "cost": 2.0, "target": "none",
+   "desc": "80% fewer errors for the next 6 hours.",
+   "effects": [{"type": "modifier", "hours": 6, "modifier": {"stat": "error", "op": "mult", "value": 0.2}}]},
 
-  {"id": "extension", "name": "Deadline Extension", "short": "Extend", "cost": 1.5, "target": "task",
-   "desc": "Push one task's deadline back by 2 hours.",
-   "effects": [{"type": "extend_deadline", "minutes": 120}]},
+  {"id": "extension", "name": "Deadline Extension", "short": "Extend", "cost": 1.0, "target": "task",
+   "desc": "Push one task's deadline back by 3 hours.",
+   "effects": [{"type": "extend_deadline", "minutes": 180}]},
 
-  {"id": "nap_pod", "unlock_level": 2, "name": "Nap Pod Booking", "short": "Nap", "cost": 2.5, "target": "gha",
+  {"id": "nap_pod", "tags": ["wellbeing", "night"], "unlock_level": 2, "name": "Nap", "short": "Nap", "cost": 0.5, "target": "gha",
    "desc": "One analyst naps for an hour, then comes back fully rested.",
    "effects": [{"type": "away", "pick": "target", "hours": 1, "reason": "Napping"}, {"type": "fatigue_floor", "who": "target"}]},
 
-  {"id": "coffee_run", "name": "Coffee Run", "short": "Coffee", "cost": 1.0, "target": "none",
-   "desc": "Everyone on shift: fatigue -12.",
-   "effects": [{"type": "fatigue", "who": "on_shift", "amount": -12}]}
+  {"id": "coffee_run", "tags": ["caffeine"], "name": "Coffee Run", "short": "Coffee", "cost": 0.5, "target": "none",
+   "desc": "Everyone on shift: fatigue -25.",
+   "effects": [{"type": "fatigue", "who": "on_shift", "amount": -12}]},
+
+  {"id": "incident_briefing", "tags": ["cims"], "name": "Incident Briefing", "short": "Briefing", "cost": 1.5, "target": "none",
+   "desc": "SOP tasks 50% faster for the next 5 hours.",
+   "effects": [{"type": "modifier", "hours": 5, "modifier": {"stat": "speed", "op": "mult", "value": 1.5, "when": {"kind": "sop"}}}]}
 ]

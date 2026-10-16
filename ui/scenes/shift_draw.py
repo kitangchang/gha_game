@@ -6,6 +6,7 @@ import math
 
 import pygame
 
+from game.effects import reward_summary
 from game.geo import region_label, short_place
 from game.util import DAY_NAMES, fmt_clock, fmt_minutes, fmt_money
 
@@ -13,7 +14,7 @@ from ..icons import get_icons
 from ..richtext import get_rich
 from ..theme import C, TONES, H, W, mag_color, mix, render
 from ..widgets import TOOLTIP, alpha_rect, bar, check_icon, draw_text, lock_icon, panel, pill, pips
-from .common import (catalogue_day_label, draw_portrait, draw_sprite, fatigue_color, gha_tooltip, relic_lines,
+from .common import (catalogue_day_label, count_badge, owned_tools, draw_portrait, draw_sprite, fatigue_color, gha_tooltip, relic_lines,
                      skill_pill, skill_tags, team_color_of, trust_bar)
 from .wall import draw_cams, draw_clocks, draw_dart, draw_traces
 
@@ -50,6 +51,8 @@ SOP_ORDER = ["prelim", "page_duty", "assess_tsunami", "assess_dart", "send_eat",
 # ----------------------------------------------------------------- task bits
 def task_color(scene, t):
     data = scene.data
+    if t.meta.get("reward"):
+        return C.gold                     # contract work
     if t.kind == "eq":
         ev = scene.eng.events.get(t.event_uid)
         return mag_color(ev.display_mag()) if ev else C.accent
@@ -94,6 +97,10 @@ def sop_label(scene, t, ev) -> str:
     return f"{tag} · {ev.mag_label()} {short_place(ev.description, 16)}"
 
 
+def contract_reward(scene, t) -> str:
+    return t.meta.get("reward_text") or reward_summary(scene.data, t.meta.get("reward", []))
+
+
 def task_tooltip(scene, t) -> list:
     eng, data = scene.eng, scene.data
     ev = eng.events.get(t.event_uid) if t.event_uid is not None else None
@@ -110,8 +117,17 @@ def task_tooltip(scene, t) -> list:
         lines.append((t.subtitle, C.dim, 13))
     if t.desc:
         lines.append((t.desc, C.dim, 12))
+    if t.meta.get("reward"):
+        lines.append((f"Contract: {contract_reward(scene, t)} if it's done on time with no errors.", C.gold, 12,
+                      "semibold"))
+        if t.meta.get("expires"):
+            lines.append(("If nobody gets to it in time, the contract lapses (no trust lost).", C.faint, 11))
     due, col, _ = due_info(eng, t)
-    lines.append((f"{data.skill_name(t.skill)} · complexity {t.complexity} · importance {t.importance:.2f}", C.faint, 12))
+    kind = {"eq": "Earthquake", "sop": "SOP step", "bau": "Business as usual (BAU)", "staffing": "Staffing"}.get(t.kind, "")
+    if t.meta.get("reward"):
+        kind = "Contract (BAU)"
+    lines.append((f"{kind} · {data.skill_name(t.skill)} · complexity {t.complexity} · importance {t.importance:.2f}",
+                  C.faint, 12))
     if t.locked:
         lines.append((f"Locked: {requirement_text(scene, t)}. You can queue it already.", C.warn, 12))
     else:
@@ -172,8 +188,11 @@ def draw_inbox_card(scene, surf, rect, t, mouse, selected=False):
             sub, sub_col = t.desc or t.subtitle, dim_col
         draw_text(surf, sub, (x, rect.y + 26), 12, sub_col, max_width=text_right - x)
         kind = {"sop": "SOP step", "bau": "Business as usual", "staffing": "Staffing"}.get(t.kind, "")
-        third = requirement_text(scene, t) if locked else kind
-        draw_text(surf, third, (x, rect.y + 43), 11, C.faint, max_width=text_right - x)
+        third, third_col = (requirement_text(scene, t) if locked else kind), C.faint
+        if t.meta.get("reward") and not locked:
+            third, third_col = f"Contract · {contract_reward(scene, t)}", C.gold
+        draw_text(surf, third, (x, rect.y + 43), 11, third_col, "semibold" if third_col == C.gold else "regular",
+                  max_width=text_right - x)
     if frac is not None:
         w = int((rect.width - 10) * frac)
         pygame.draw.rect(surf, C.panel3, (rect.x + 6, rect.bottom - 4, rect.width - 12, 2))
@@ -249,7 +268,7 @@ def shift_teams(scene) -> list:
 
 def shift_tooltip(scene, shift, start: int, end: int, teams: list) -> list:
     eng, run, data = scene.eng, scene.run, scene.data
-    lines = [(f"{shift['name']} shift, {start:02d}00–{end:02d}00", tuple(shift["color"]), 14, "bold")]
+    lines = [(f"{shift['name']} shift, {start:02d}00-{end:02d}00", tuple(shift["color"]), 14, "bold")]
     rostered = set()
     for key in teams:
         members = [g for gid in run.roster.teams.get(key, []) if (g := run.gha(gid)) is not None and g.active]
@@ -287,7 +306,7 @@ def draw_hud(scene, surf, mouse):
     s_col = tuple(shift.get("color", C.gold))
     start, end = shift_times(scene, shift)
     sx = 236
-    shift_rect = pill(surf, f"{shift['name'].upper()} {start:02d}00–{end:02d}00", (sx, 9), C.bg, s_col, size=11)
+    shift_rect = pill(surf, f"{shift['name'].upper()} {start:02d}00-{end:02d}00", (sx, 9), C.bg, s_col, size=11)
     x = sx
     teams = shift_teams(scene)
     for key in teams[:2]:
@@ -340,9 +359,9 @@ def draw_tools(scene, surf, mouse):
                       "bold", anchor="topright", max_width=rect.width - 90)
         if r.collidepoint(mouse):
             TOOLTIP.set([(special["name"], C.sop, 14, "bold"), (special.get("desc", ""), C.text, 13)], 320)
-    owned = [rid for rid in run.relics if rid in data.relics]
+    owned = owned_tools(run, data)
     if not owned:
-        draw_text(surf, "None yet. Buy tools in the shop between weeks.", (rect.x + 12, rect.y + 32), 12, C.faint)
+        draw_text(surf, "None yet.", (rect.x + 12, rect.y + 32), 12, C.faint)
         return
     icons = get_icons()
     fits = per_row * 2
@@ -354,9 +373,10 @@ def draw_tools(scene, surf, mouse):
             continue
         if icons is not None:
             icons.draw(surf, "tools", rid, r.topleft, size)
+        count_badge(surf, r, run.relics.count(rid))
         if r.collidepoint(mouse):
             pygame.draw.rect(surf, C.white, r.inflate(4, 4), 1, border_radius=6)
-            TOOLTIP.set(relic_lines(rid, data), 300)
+            TOOLTIP.set(relic_lines(rid, data, run), 340)
 
 
 # -------------------------------------------------------------------- inbox
@@ -597,7 +617,7 @@ def draw_sop(scene, surf, mouse):
     draw_text(surf, "SOP TRACKER", (box.x + 12, box.y + 10), 11, C.faint, "bold")
     active = eng.active_sop_events()
     if not active:
-        draw_text(surf, "No active SOPs. Big events trigger checklists here.", (box.x + 12, box.y + 34), 12,
+        draw_text(surf, "No active SOPs", (box.x + 12, box.y + 34), 12,
                   C.faint, max_width=box.width - 24)
         return
     clip = surf.get_clip()
@@ -649,7 +669,8 @@ def draw_sop(scene, surf, mouse):
     surf.set_clip(clip)
 
 
-def draw_log(scene, surf):
+def draw_log(scene, surf, mouse=(-1, -1)):
+    """Newest at the bottom. Hover a line for its full text."""
     eng = scene.eng
     box = scene.log_rect
     panel(surf, box, C.panel, C.border, radius=8)
@@ -666,6 +687,10 @@ def draw_log(scene, surf):
             rt.draw_line(surf, text, (box.x + 56, y), 12, col, box.width - 68)
         else:
             draw_text(surf, text, (box.x + 56, y), 12, col, max_width=box.width - 68)
+        row = pygame.Rect(box.x + 8, y - 2, box.width - 16, 18)
+        if row.collidepoint(mouse):
+            pygame.draw.rect(surf, C.border2, row, 1, border_radius=4)
+            TOOLTIP.set([(fmt_clock(t, ds), C.faint, 11, "bold"), (text, col, 13)], 360)
         y -= 18
 
 

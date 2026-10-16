@@ -1,9 +1,12 @@
 {
   "_doc": "Fictional analyst names. Female analysts get a name from 'female' or 'neutral', male analysts from 'male' or 'neutral'; surnames from 'last'.",
-  "female": ["Aroha", "Mere", "Ngaio", "Anahera", "Tui", "Mele", "Losa", "Priya", "Mei", "Hana", "Yuki", "Olivia", "Charlotte", "Isla", "Amelia", "Harper", "Ella", "Ruby", "Sophie", "Grace", "Zoe", "Niamh", "Freya", "Aisha", "Kiri", "Ana", "Ivy", "Maya", "Indira", "Moana", "Leilani", "Sienna", "Emma", "Ava", "Madison", "Madisen"],
-  "male": ["Tama", "Hemi", "Wiremu", "Kahu", "Rangi", "Sione", "Tevita", "Arjun", "Wei", "Liam", "Jack", "Oliver", "Noah", "Mason", "Lucas", "Finn", "Ethan", "Leo", "Callum", "Rohan", "Tomasi", "Pita", "Theo", "Mateo", "Tane", "Nikau", "Hamish", "James", "Daniel", "Ben", "Michael", "Mike", "Tom"],
-  "neutral": ["Jun", "Manaia", "Sam", "Alex", "Jordan", "Riley", "Quinn"],
-  "last": ["Walker", "Ngata", "Te Rangi", "Patel", "Chen", "Kim", "Fifita", "Taufa", "Brown", "Wilson", "Thompson", "Tapsell", "Parata", "Harris", "Clarke", "Singh", "Nguyen", "Rewi", "Hughes", "Bennett", "Kaur", "Wong", "Lee", "Murphy", "Fraser", "Campbell", "Douglas", "Reid", "Morgan", "Tuhoe", "Herewini", "Faleolo", "Sato", "Park", "O'Connor", "Fitzgerald", "Russo", "Mendes", "Novak", "Lindqvist", "Okafor", "Haddad", "Rossi", "Kowalski", "MacLeod", "Pohatu", "Whaanga", "Tiakiwai", "Ellis", "Hart"],
+  "female": ["Aisha", "Anita", "Amelia", "Ana", "Aroha", "Ava", "Charlotte", "Clare", "Chloe", "Ella", "Emma", "Freya", "Grace", "Hana", "Heather", "Indira", "Isla", "Ivy", "Kara", "Kim", "Kiri", "Leilani", "Losa", "Madisen", "Maddie", "Madison","Maya", "Mei", "Mele", "Mere", "Moana", "Nicole", "Niamh", "Olivia", "Priya", "Renee" ,"Ruby", "Sarah","Sienna", "Sophie", "Yuki", "Zoe"],
+  "male": ["Aaron","Andy", "Aidan", "Arjun", "Allen, \"big al\"","Ben", "Callum", "Carl", "Daniel", "Ethan", "Finn", "Harry", "Hamish", "Hemi", "Hugh", "Jack", "James", "Kahu", "karl", "Leo", "Liam", "Lucas", "Mason", "Matthew", "Matt", "Michael", "Mike", "Nikau", "Noah", "Oliver", "Oli", "Pita", "Rangi", "Rich", "Rohan", "Sione", "Tama", "Tane", "Tevita", "Theo", "Tomasi", "Wei", "Wiremu"],
+  "neutral": ["Alex", "Jamie", "Jun", "Manaia", "Quinn", "Riley", "Rain", "Sam", "Wren"],
+  "last": ["Bennett", "Brown", "Baker","Campbell", "Chen", "Clarke", "Douglas", "Drake", "Ellis", "Faleolo", "Faber", "Fitzgerald", "Fraser", "Gerickson",
+    "Haddad", "Harris", "Harrison", "Hart", "Herewini", "Hughes", "Kaur", "Kim", "Kowalski", "Lee", "Lindqvist", "MacLeod", "Mendes", "Morgan", "Murphy",
+    "Newmann", "Ngata", "Nguyen", "Novak", "O'Connor", "Okafor", "Parata", "Park", "Patel", "Pohatu", "Reid", "Rewi", "Rossi", "Russo", "Sato", "Singh",
+    "Thompson", "Thompson-Lang", "Taufa", "Te Rangi", "Thompson", "Tiakiwai", "Tuhoe", "Walker", "Whaanga", "Wilson", "Wong"],
   "colors": [
     [86, 180, 233],
     [240, 168, 80],

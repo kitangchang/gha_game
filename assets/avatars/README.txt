@@ -56,6 +56,25 @@ for everyone. This works in any layer, not just hair.
 makes 12% of men bald and no women. ("any" sets it for analysts with no gender,
 such as contractors and older saved analysts.)
 
+Pieces that don't go together
+-----------------------------
+Add an "exclude" list to avatar_config.json. Each rule names pieces (by layer)
+that must never be picked together. File names can use * as a wildcard, and a
+palette can be named too, with colours by position (0 = the first colour):
+
+    "exclude": [
+      {"skin": ["base_long.png"], "hair": ["curly*.png", "long.png"]},
+      {"skin": ["base_round.png", "base_oval.png"], "hair": ["f_bun.png"]},
+      {"hair": ["m_mohawk.png"], "accessories": ["beanie_fixed.png"]},
+      {"hair": ["bob.png"], "hair_colours": [0, 1]}
+    ]
+
+The first rule: nobody with the base_long head gets curly or long hair. A rule
+can have two or more parts; all of them have to match for it to apply. Layers
+are picked in the order they're listed, so the later layer is the one that
+gives way (hair is re-picked, not the skin). The avatar builder in the gallery
+ignores the rules, so you can still try any combination by hand.
+
 Condition layers (e.g. tired eye rings)
 ---------------------------------------
 A layer with "condition": "tired" is only drawn while the analyst is tired

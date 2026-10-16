@@ -7,8 +7,9 @@ from .avatars import random_avatar
 from .engine import WeekEngine
 from .models import GHA, Roster, RunState
 from .modifiers import Ctx, ModifierSet, collect_specials
+from .tags import count_tags
 from .run_builder import build_plan
-from .util import DAY_NAMES, clamp
+from .util import DAY_NAMES, clamp, fmt_money, weighted_choice
 
 ARCHETYPES = {
     "graduate":    {"label": "Graduate",    "base": (1, 2), "focus": 1, "focus_lvl": (2, 3), "traits": (0, 1), "good": 0.75, "ltf": (0, 8)},
@@ -158,13 +159,16 @@ def new_run(data, catalog, seed: int | None = None, length_key: str = "standard"
         run.ghas.append(make_gha(data, rng, run, arche, focus, taken))
     run.roster = default_roster(data, run.ghas)
     prepare_week(data, run)
+    options = start_reward_options(data, run)
+    if options:
+        run.flags["start_reward"] = options
     return run
 
 
 def run_mods(data, run: RunState) -> ModifierSet:
     mods = ModifierSet(data)
     special = run.plan[run.week].special if run.week < len(run.plan) else None
-    mods.rebuild(run.relics, special)
+    mods.rebuild(run.relics, special, count_tags(data, run))
     return mods
 
 
@@ -219,7 +223,8 @@ def finish_week(data, run: RunState, eng: WeekEngine) -> dict:
     base = econ["base_grant"]
     bonus = econ["performance_bonus_max"] * perf_adj
     trust_bonus = econ["trust_bonus_max"] * max(0.0, run.rating) / 100.0
-    payout = (base + bonus + trust_bonus) * payout_mult
+    weekly_bonus = max(0.0, eng.mods.add("weekly_bonus", Ctx()))
+    payout = (base + bonus + trust_bonus) * payout_mult + weekly_bonus
     salaries = weekly_salaries(run)
     if special and special.get("end_rating"):
         run.rating = min(float(data.config["run"]["max_rating"]), run.rating + special["end_rating"])
@@ -250,7 +255,7 @@ def finish_week(data, run: RunState, eng: WeekEngine) -> dict:
         "tasks_done": st["tasks_done"], "ontime": st["ontime"], "late": st["late"], "errors": st["errors"],
         "caught": st["caught"], "events": st["events"], "sop_events": st["sop_events"], "overdue": st["overdue"],
         "perf": perf, "perf_adj": perf_adj, "base": base, "bonus": bonus, "trust_bonus": trust_bonus,
-        "payout_mult": payout_mult, "payout": payout, "salaries": salaries, "overtime": eng.overtime_cost,
+        "payout_mult": payout_mult, "weekly_bonus": weekly_bonus, "payout": payout, "salaries": salaries, "overtime": eng.overtime_cost,
         "net": payout - salaries, "budget_end": run.budget, "leave": leave_notes,
         "burnouts": list(st["burnouts"]), "level_ups": list(st["level_ups"]), "sick_calls": st["sick_calls"],
         "covers": st["covers"], "call_ins": st["call_ins"], "unmanned": st["unmanned_shifts"],
@@ -269,12 +274,80 @@ def finish_week(data, run: RunState, eng: WeekEngine) -> dict:
     for g in run.ghas:
         if not g.active:
             run.roster.remove(g.id)
+    boss_day = any(d.boss for d in eng.plan.days)
     run.week += 1
     if run.week >= run.weeks_total:
         run.phase = "won"
     else:
         prepare_week(data, run)
+        if boss_day:
+            options = boss_reward_options(data, run)
+            if options:
+                run.flags["boss_reward"] = options
+                summary["boss_reward"] = options
     return summary
+
+
+def reward_options(data, run: RunState, weights: dict, count: int) -> list:
+    """Tools to choose from (unlocked, not owned, not in this week's shop), drawn
+    by rarity weights. Used for boss-day rewards and the starting tool."""
+    level = getattr(run, "unlock_level", 99)
+    in_shop = {o["id"] for o in (run.shop or {}).get("relics", [])}
+    # "repeatable" tools can be owned more than once; "reward_weight" makes a tool rarer (<1) or commoner (>1)
+    pool = [r for r in data.relics.values() if (r.get("repeatable") or r["id"] not in run.relics)
+            and r["id"] not in in_shop and r["rarity"] in weights and weights[r["rarity"]] > 0
+            and int(r.get("unlock_level", 1)) <= level]
+    picks = []
+    for _ in range(int(count)):
+        if not pool:
+            break
+        r = weighted_choice(run.rng, pool, [weights[p["rarity"]] * float(p.get("reward_weight", 1.0)) for p in pool])
+        pool.remove(r)
+        picks.append(r["id"])
+    return picks
+
+
+def boss_reward_options(data, run: RunState) -> list:
+    """Tools offered for surviving a week's boss day: boss-only tools plus rare and
+    legendary ones."""
+    diff = data.config["difficulty"]
+    return reward_options(data, run, diff.get("boss_reward_weights", {"boss": 55, "rare": 35, "legendary": 10}),
+                          diff.get("boss_reward_choices", 3))
+
+
+def start_reward_options(data, run: RunState) -> list:
+    """The starting tool to choose from at the beginning of a run."""
+    st = data.config["run"].get("starting_tool", {})
+    if not st.get("enabled", True):
+        return []
+    return reward_options(data, run, st.get("weights", {"boss": 60, "rare": 25, "uncommon": 15}),
+                          st.get("choices", 3))
+
+
+def claim_boss_reward(data, run: RunState, rid: str | None, flag: str = "boss_reward") -> str:
+    """Take one of the offered tools (or None to skip). Returns a message.
+    flag: which offer this is (boss_reward or start_reward)."""
+    options = run.flags.pop(flag, None) or []
+    if rid is None or rid not in options or (rid in run.relics and not data.relics[rid].get("repeatable")):
+        return "Reward skipped."
+    run.relics.append(rid)
+    extra = gain_effects(data, run, rid)
+    from .shop import refresh_after_new_tool
+    refresh_after_new_tool(data, run)
+    return f"New tool: {data.relics[rid]['name']}" + (f" ({extra})" if extra else "")
+
+
+def gain_effects(data, run: RunState, rid: str) -> str:
+    """A tool's one-off "on_gain" effects (budget, rating) when you get it."""
+    msgs = []
+    for e in data.relics[rid].get("on_gain", []):
+        if e.get("type") == "budget":
+            run.budget += e["amount"]
+            msgs.append(f"+{fmt_money(e['amount'])}")
+        elif e.get("type") == "rating":
+            run.rating = clamp(run.rating + e["amount"], 0.0, float(data.config["run"]["max_rating"]))
+            msgs.append(f"{e['amount']:+g} trust")
+    return ", ".join(msgs)
 
 
 def roster_issues(data, run: RunState) -> list:

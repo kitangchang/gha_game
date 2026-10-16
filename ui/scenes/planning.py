@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import pygame
 
+from game.forecast import alert_level, day_hazard, hazard_short, hazard_text
 from game.modifiers import collect_specials
 from game.profile import level_for_xp
 from game.run import roster_issues, start_week, weekly_salaries
@@ -10,14 +11,19 @@ from game.util import DAY_NAMES, fmt_money
 
 from ..app import Scene
 from ..richtext import get_rich
-from ..theme import C, H, W
+from ..theme import C, H, W, mix
 from ..widgets import TOOLTIP, Button, draw_text, panel, pill, warn_icon
+from .boss_reward import BossReward
 from .common import draw_tool_strip, trust_bar
 from .help import HelpOverlay
 from .layout import CONTENT_Y, HEADER_H, TABS_Y, TOOLBAR_H, WEEK_Y
 from .roster_tab import RosterTab
 from .shop_tab import ShopTab
 from .team_tab import TeamTab
+
+
+ALERT_COLOURS = {1: (240, 210, 70), 2: (245, 150, 60), 3: (236, 80, 70)}
+ALERT_WORDS = {1: "Busier than usual", 2: "Heavy activity expected", 3: "Severe activity expected"}
 
 
 def activity_label(p: float) -> str:
@@ -54,6 +60,14 @@ class PlanningScene(Scene):
         self.help_button = Button((W - 360, 19, 90, 34), "Help", self.help.toggle, "ghost", 13)
         self.centre_button = Button((W - 500, 19, 130, 34), "Centre", self.to_centre, "ghost", 13,
                                     tooltip="Back to the centre (the run is saved at the start of the week).")
+        # A boss reward left unclaimed (the game was closed on the summary screen).
+        self.reward = BossReward(app, run, on_done=self._reward_done, can_close=False)
+        self.reward.show()
+        # The starting tool for a new run. "Back to planning" closes it; until a tool is picked (or
+        # skipped) the Start week button reads "Choose starting tool" and reopens it.
+        self.start_pick = BossReward(app, run, on_done=self._reward_done, can_close=True, flag="start_reward")
+        if not self.reward.open:
+            self.start_pick.show()
 
     def on_enter(self):
         self.app.save()
@@ -61,6 +75,9 @@ class PlanningScene(Scene):
     def set_tab(self, key: str):
         self.tab = key
         self.confirm_start = False
+
+    def _reward_done(self, message: str):
+        self.flash(message, C.good if message.startswith("New") else C.dim)
 
     def flash(self, text: str, tone=C.dim):
         self.message = text
@@ -78,6 +95,9 @@ class PlanningScene(Scene):
 
     # ------------------------------------------------------------------ start
     def try_start(self):
+        if self.start_pick.pending:
+            self.start_pick.show()
+            return
         issues = roster_issues(self.data, self.run)
         desk_errors = [t for lvl, t, code in issues if code == "desks"]
         if desk_errors:
@@ -96,7 +116,7 @@ class PlanningScene(Scene):
 
     # ----------------------------------------------------------------- events
     def handle(self, event):
-        if self.help.handle(event):
+        if self.reward.handle(event) or self.start_pick.handle(event) or self.help.handle(event):
             return
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             if self.tabs[self.tab].cancel():
@@ -136,6 +156,10 @@ class PlanningScene(Scene):
             warn_icon(surf, (606, 44), 12)
         self.centre_button.draw(surf, mouse)
         self.help_button.draw(surf, mouse)
+        if self.start_pick.pending:
+            self.start_button.label, self.start_button.style = "Choose starting tool", "good"
+        else:
+            self.start_button.label, self.start_button.style = "Start week  ▶", "primary"
         self.start_button.draw(surf, mouse)
         draw_tool_strip(surf, run, self.data, mouse, HEADER_H, TOOLBAR_H)
         self._draw_week_strip(surf, mouse)
@@ -154,6 +178,12 @@ class PlanningScene(Scene):
             draw_text(surf, self.message, rect.center, 14, self.message_tone, "semibold", anchor="center",
                       max_width=rect.width - 20)
         self.help.draw(surf)
+        if self.reward.open:
+            TOOLTIP.clear()
+            self.reward.draw(surf, mouse)
+        elif self.start_pick.open:
+            TOOLTIP.clear()
+            self.start_pick.draw(surf, mouse)
 
     def _draw_week_strip(self, surf, mouse):
         run, data = self.run, self.data
@@ -165,63 +195,92 @@ class PlanningScene(Scene):
         label = f"Expected activity this week: {activity_label(mean_p)}"
         if special:
             panel(surf, (16, y, W - 32, 28), (52, 40, 70), C.sop, radius=6)
-            draw_text(surf, f"SPECIAL WEEK · {special['name'].upper()}", (28, y + 6), 13, C.sop, "bold")
+            hr = draw_text(surf, f"SPECIAL WEEK · {special['name'].upper()}", (28, y + 6), 13, C.sop, "bold")
+            lr = draw_text(surf, label, (W - 28, y + 6), 13, C.dim, anchor="topright")
             rt = get_rich()
+            dx, dw = hr.right + 18, lr.x - 24 - (hr.right + 18)
             if rt is not None:
-                rt.draw_line(surf, special["desc"], (330, y + 6), 13, C.text, W - 760)
+                rt.draw_line(surf, special["desc"], (dx, y + 6), 13, C.text, dw)
             else:
-                draw_text(surf, special["desc"], (330, y + 6), 13, C.text, max_width=W - 760)
-            draw_text(surf, label, (W - 28, y + 6), 13, C.dim, anchor="topright")
+                draw_text(surf, special["desc"], (dx, y + 6), 13, C.text, max_width=dw)
             y += 34
         else:
             draw_text(surf, label, (16, y + 4), 13, C.dim)
-            draw_text(surf, "'?' marks a day when something unexpected will happen.", (W - 16, y + 4), 12, C.faint,
-                      anchor="topright")
             y += 28
         gap = 10
         w = (W - 32 - gap * 6) // 7
         h = TABS_Y - 12 - y
+        levels = data.config["difficulty"].get("alert_levels", [0.5, 0.75, 0.9])
+        self.day_rects = []
         for i, day in enumerate(week.days):
             rect = pygame.Rect(16 + i * (w + gap), y, w, h)
+            self.day_rects.append(rect)
             hover = rect.collidepoint(mouse)
             panel(surf, rect, C.panel2 if not hover else C.hover, C.border, radius=6)
-            draw_text(surf, DAY_NAMES[i].upper(), (rect.x + 12, rect.y + 8), 15, C.text, "bold")
-            draw_text(surf, f"Day {day.index + 1}", (rect.x + 56, rect.y + 11), 11, C.faint)
+            name = draw_text(surf, DAY_NAMES[i].upper(), (rect.x + 12, rect.y + 8), 15, C.text, "bold")
+            draw_text(surf, f"Day {day.index + 1}", (name.right + 8, rect.y + 11), 11, C.faint)
+            hz = day_hazard(day)
+            alert = alert_level(day.percentile, levels)
             bx = rect.right - 10
             if day.random_event_at is not None:
                 r = pill(surf, " ? ", (bx, rect.y + 8), C.bg, C.sop, size=12, anchor="topright")
                 bx = r.x - 4
-            if day.boss:
-                pill(surf, "FINAL DAY", (bx, rect.y + 8), C.white, C.bad, size=10, anchor="topright")
+            if day.boss or alert:
+                col = ALERT_COLOURS[3 if day.boss else alert]
+                r = pill(surf, " ! ", (bx, rect.y + 8), C.bg, col, size=12, anchor="topright")
+                bx = r.x - 4
+            if getattr(day, "final", False):
+                pill(surf, "FINAL", (bx, rect.y + 8), C.white, C.bad, size=10, anchor="topright")
+            elif day.boss:
+                pill(surf, "BOSS", (bx, rect.y + 8), C.white, mix(C.bad, C.panel, 0.25), size=10, anchor="topright")
             if forecast:
-                lvl = activity_label(day.percentile)
                 frac = 0.1 + 0.9 * day.percentile
-                pygame.draw.rect(surf, C.panel3, (rect.x + 12, rect.bottom - 18, rect.width - 24, 6), border_radius=3)
+                pygame.draw.rect(surf, C.panel3, (rect.x + 12, rect.bottom - 14, rect.width - 24, 6), border_radius=3)
                 col = C.good if day.percentile < 0.5 else C.warn if day.percentile < 0.85 else C.bad
-                pygame.draw.rect(surf, col, (rect.x + 12, rect.bottom - 18, int((rect.width - 24) * frac), 6),
+                pygame.draw.rect(surf, col, (rect.x + 12, rect.bottom - 14, int((rect.width - 24) * frac), 6),
                                  border_radius=3)
-                draw_text(surf, f"{lvl} · max M{day.max_mag:.1f}", (rect.x + 12, rect.bottom - 38), 12, C.dim)
+                if day.boss or alert:
+                    head, head_col = hazard_short(hz), ALERT_COLOURS[3 if day.boss else alert]
+                    sub = f"{len(day.events)} quakes" + (f" · {hz['place']}" if hz["place"] and hz["kind"] != "busy"
+                                                         else f" · max M{day.max_mag:.1f}")
+                else:
+                    head, head_col = f"{activity_label(day.percentile)} day", C.text
+                    sub = f"{len(day.events)} quakes · max M{day.max_mag:.1f}"
+                draw_text(surf, head, (rect.x + 12, rect.bottom - 52), 12, head_col, "semibold",
+                          max_width=rect.width - 24)
+                draw_text(surf, sub, (rect.x + 12, rect.bottom - 34), 12, C.dim, max_width=rect.width - 24)
+            elif day.boss:
+                draw_text(surf, hazard_text(hz, False), (rect.x + 12, rect.bottom - 32), 12,
+                          mix(C.bad, C.text, 0.35), "semibold", max_width=rect.width - 24)
+            elif alert:
+                draw_text(surf, ALERT_WORDS[alert], (rect.x + 12, rect.bottom - 32), 12, ALERT_COLOURS[alert],
+                          max_width=rect.width - 24)
             else:
-                draw_text(surf, "No forecast", (rect.x + 12, rect.bottom - 32), 12, C.faint)
-            on_duty = self._day_teams(i)
-            seg_w = (rect.width - 20) // len(on_duty)
-            for s_i, teams in enumerate(on_duty):
-                seg = pygame.Rect(rect.x + 10 + s_i * seg_w, rect.bottom - 7, seg_w - 3, 4)
-                pygame.draw.rect(surf, data.team_color(teams[0]) if teams else C.panel3, seg, border_radius=2)
+                draw_text(surf, "Normal day", (rect.x + 12, rect.bottom - 32), 12, C.faint)
             if hover:
-                lines = [(f"{DAY_NAMES[i]} — day {day.index + 1} of the run", C.text, 14, "bold")]
+                on_duty = self._day_teams(i)
+                lines = [(f"{DAY_NAMES[i]}, day {day.index + 1} of the run", C.text, 14, "bold")]
                 for shift, teams in zip(data.shifts, on_duty):
                     names = " + ".join(f"{data.team_name(t)} team" for t in teams) or "nobody rostered"
                     lines.append((f"{shift['name']}: {names}", C.dim, 12))
+                lines.append(6)
+                if getattr(day, "final", False):
+                    lines.append((f"Final boss day: {hazard_text(hz, forecast)}.", C.bad, 13, "bold"))
+                elif day.boss:
+                    lines.append((f"Boss day: {hazard_text(hz, forecast)}.", ALERT_COLOURS[3], 13, "bold"))
+                    lines.append(("Survive the week to choose a rare or boss-only tool.", C.dim, 12))
+                elif alert:
+                    lines.append((ALERT_WORDS[alert] + ".", ALERT_COLOURS[alert], 13, "semibold"))
+                    if forecast:
+                        lines.append((f"Forecast: {hazard_text(hz, True)}", C.text, 12))
                 if day.random_event_at is not None:
                     lines.append(("Something unexpected will happen today.", C.sop, 13))
-                if day.boss:
-                    lines.append(("The last day of the run: expect a major event.", C.bad, 13))
                 if forecast:
-                    lines.append((f"Forecast activity: {activity_label(day.percentile)}", C.dim, 13))
+                    lines.append((f"Forecast activity: {activity_label(day.percentile)} "
+                                  f"(busier than {day.percentile * 100:.0f}% of days)", C.dim, 12))
                 else:
-                    lines.append(("Buy the Aftershock Forecast Model to see daily activity.", C.faint, 12))
-                TOOLTIP.set(lines, 320)
+                    lines.append(("The Aftershock Forecast Model shows what each day holds.", C.faint, 11))
+                TOOLTIP.set(lines, 340)
 
     def _day_teams(self, day: int) -> list:
         """Per shift of a day of this week, the teams rostered (from the roster grid)."""

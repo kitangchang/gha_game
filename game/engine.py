@@ -15,6 +15,7 @@ from .dart import triggered_buoys
 from .geo import region_of, short_place
 from .models import GHA, EqEvent, Task
 from .modifiers import Ctx, ModifierSet, collect_specials
+from .tags import count_tags
 from .tasks import (build_bau_task, build_event_tasks, build_sop_checklist, build_sop_task, build_staffing_task,
                     sop_threshold)
 from .util import DAY_NAMES, clamp, fmt_clock
@@ -93,7 +94,7 @@ class WeekEngine:
 
     # ------------------------------------------------------------------ setup
     def refresh_mods(self):
-        self.mods.rebuild(self.run.relics, self.plan.special)
+        self.mods.rebuild(self.run.relics, self.plan.special, count_tags(self.data, self.run))
         growth = self.cfg["difficulty"].get("expectation_growth_per_week", 0.0) * self.run.week
         if growth:
             # Public expectations rise as the season goes on: every trust loss counts for more.
@@ -343,18 +344,34 @@ class WeekEngine:
             self.inbox.remove(t.id)
 
     # ----------------------------------------------------------- player actions
-    def assign(self, tid: int, gid: int, index: int | None = None) -> bool:
+    def assign(self, tid: int, gid: int, index: int | None = None, by_player: bool = False) -> bool:
         t, g = self.tasks.get(tid), self.ghas.get(gid)
         if t is None or g is None or t.done or t.hidden or not g.on_shift:
             return False
         self._detach(t)
+        if t.meta.get("reward"):
+            # A contract the player drops above other work is done in that order ("pinned");
+            # otherwise contracts wait until everything else in the queue is done.
+            if by_player and index is not None and index < len(g.queue):
+                t.meta["pinned"] = True
+            else:
+                t.meta.pop("pinned", None)
         if index is None or index >= len(g.queue):
             g.queue.append(tid)
         else:
             g.queue.insert(max(0, index), tid)
         t.assignee = gid
         t.meta.pop("manual_unassign", None)
+        self._contracts_last(g)
         return True
+
+    def _contracts_last(self, g: GHA):
+        """Unpinned contract work goes to the back of the queue, behind quakes, SOPs and BAU."""
+        def side_work(tid):
+            t = self.tasks.get(tid)
+            return t is not None and bool(t.meta.get("reward")) and not t.meta.get("pinned")
+        if any(side_work(q) for q in g.queue):
+            g.queue[:] = [q for q in g.queue if not side_work(q)] + [q for q in g.queue if side_work(q)]
 
     def unassign(self, tid: int) -> bool:
         t = self.tasks.get(tid)
@@ -370,9 +387,13 @@ class WeekEngine:
         return [g for g in self.ghas.values()
                 if g.active and not g.temp and g.id not in lineup and g.id not in self.run.away_week]
 
+    def call_in_cost(self) -> float:
+        """Overtime cost of a call-in ($k), after tools like the Duty Phone Upgrade."""
+        return round(self.cfg["run"]["call_in_cost"] * max(0.0, self.mods.mult("call_in_cost", Ctx())), 2)
+
     def call_in(self, gid: int) -> tuple:
         g = self.ghas.get(gid)
-        cost = self.cfg["run"]["call_in_cost"]
+        cost = self.call_in_cost()
         if g is None or g.on_shift:
             return False, "They're already here."
         if None not in self.seats:
@@ -404,6 +425,7 @@ class WeekEngine:
         if any(e["type"] == "temp_gha" for e in c.get("effects", [])) and None not in self.seats:
             return False, "No free desk for them."
         self.run.consumables.pop(index)
+        self.refresh_mods()          # the supply's tags no longer count
         msgs = fx.apply_effects(self, c.get("effects", []), target)
         self.add_log(f"Used {c['name']}", "good")
         return True, "; ".join(m for m in msgs if m) or c["name"]
@@ -475,10 +497,36 @@ class WeekEngine:
                 dep.requires.remove(task.id)
             if not dep.requires and dep.available is None:
                 self._unlock(dep, follow_to=g)
+        if task.meta.get("reward"):
+            self._contract_done(task, g, error, ontime)
         if task.kind == "staffing" and not task.failed:
             self.modal = {"type": "staffing", "task": task.id, "slot": task.meta["slot"], "sick": task.meta["sick"]}
             self.note("modal", kind="staffing")
         self.note("done", task=task.id, gha=g.id if g else None)
+
+    def _contract_done(self, task: Task, g: GHA | None, error: bool, ontime: bool):
+        """Contract work pays out only if it's on time and has no errors."""
+        name = self.task_title(task)
+        if error or not ontime:
+            why = "had errors" if error else "was late"
+            self.add_log(f"Contract {why}: {name}. No reward.", "bad")
+            self.note("toast", text=f"{name} {why}: no reward", tone="warn")
+            return
+        msgs = [m for m in fx.apply_effects(self, task.meta["reward"], g) if m]
+        self.stats["contracts"] = self.stats.get("contracts", 0) + 1
+        text = ", ".join(msgs) or "reward received"
+        self.add_log(f"Contract done: {name}. {text}", "good")
+        self.note("toast", text=f"Contract done: {text}", tone="good")
+        if g is not None:
+            self.note("float", gha=g.id, text=msgs[0] if msgs else "Reward!", tone="good")
+
+    def _lapse_contract(self, t: Task):
+        t.failed = True
+        t.done = True
+        self._detach(t)
+        self.open_ids.discard(t.id)
+        self.add_log(f"Contract lapsed: {self.task_title(t)}", "warn")
+        self.note("toast", text=f"Contract lapsed: {self.task_title(t)}", tone="warn")
 
     def complete_external(self, task: Task):
         if task.done:
@@ -508,7 +556,9 @@ class WeekEngine:
         if task.skill == "any" or g.temp:
             return
         sm = self.cfg["skill_model"]
-        gain = task.complexity * sm["xp_per_complexity"] * self.mods.mult("xp", ctx)
+        # XP for how hard the task was and for how long it took (so long project work pays off)
+        gain = (task.complexity * sm["xp_per_complexity"] + task.work * sm.get("xp_per_work_minute", 0.0)) \
+            * self.mods.mult("xp", ctx)
         g.xp[task.skill] = g.xp.get(task.skill, 0.0) + gain
         level = g.skills.get(task.skill, 1)
         thresholds = sm["xp_to_next"]
@@ -549,6 +599,9 @@ class WeekEngine:
             if t.done or t.available is None or t.hidden:
                 continue
             if self.now <= t.available + t.deadline:
+                continue
+            if t.meta.get("expires"):
+                self._lapse_contract(t)
                 continue
             if not t.overdue:
                 t.overdue = True

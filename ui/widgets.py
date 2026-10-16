@@ -158,6 +158,41 @@ def warn_icon(surf, center, size: int = 12, color=C.warn):
 TIP_BG = (20, 25, 34)
 
 
+def line_blocks(lines, inner: int) -> list:
+    """Tooltip-style lines -> list of Surfaces, each at most `inner` wide. Used by
+    tooltips and anything else that shows the same lines (e.g. reward cards)."""
+    from .richtext import get_rich
+    rt = get_rich()
+    blocks = []
+    for item in lines:
+        if isinstance(item, pygame.Surface):
+            blocks.append(item)
+            continue
+        if isinstance(item, int) and not isinstance(item, bool):      # vertical gap in pixels
+            blocks.append(pygame.Surface((1, max(0, item - 2)), pygame.SRCALPHA))
+            continue
+        if isinstance(item, (tuple, list)):
+            text = item[0]
+            color = item[1] if len(item) > 1 else C.text
+            size = item[2] if len(item) > 2 else 13
+            weight = item[3] if len(item) > 3 else "regular"
+        else:
+            text, color, size, weight = item, C.text, 13, "regular"
+        if not text:
+            continue
+        if rt is not None and weight == "regular":
+            blocks.append(rt.block(text, size, color, inner))
+        else:
+            rows = wrap(text, size, weight, inner)
+            lh = Fonts.get(size, weight).get_linesize()
+            img = pygame.Surface((inner, lh * (len(rows) - 1) + max(lh, Fonts.get(size, weight).get_height())),
+                                 pygame.SRCALPHA)
+            for i, row in enumerate(rows):
+                img.blit(render(row, size, color, weight), (0, i * lh))
+            blocks.append(img)
+    return blocks
+
+
 class Tooltip:
     """Lines are (text, colour, size, weight) tuples, plain strings, ready-drawn
     pygame Surfaces (skill boxes, schedule strips) that are blitted as they are,
@@ -179,37 +214,10 @@ class Tooltip:
     def draw(self, surf, mouse):
         if not self.lines:
             return
-        from .richtext import get_rich
-        rt = get_rich()
-        inner = self.width - 20
-        blocks = []
-        for item in self.lines:
-            if isinstance(item, pygame.Surface):
-                blocks.append(item)
-                continue
-            if isinstance(item, int) and not isinstance(item, bool):      # vertical gap in pixels
-                blocks.append(pygame.Surface((1, max(0, item - 2)), pygame.SRCALPHA))
-                continue
-            if isinstance(item, (tuple, list)):
-                text = item[0]
-                color = item[1] if len(item) > 1 else C.text
-                size = item[2] if len(item) > 2 else 13
-                weight = item[3] if len(item) > 3 else "regular"
-            else:
-                text, color, size, weight = item, C.text, 13, "regular"
-            if not text:
-                continue
-            if rt is not None and weight == "regular":
-                blocks.append(rt.block(text, size, color, inner))
-            else:
-                rows = wrap(text, size, weight, inner)
-                lh = Fonts.get(size, weight).get_linesize()
-                img = pygame.Surface((inner, lh * len(rows)), pygame.SRCALPHA)
-                for i, row in enumerate(rows):
-                    img.blit(render(row, size, color, weight), (0, i * lh))
-                blocks.append(img)
+        blocks = line_blocks(self.lines, self.width - 20)
         h = sum(b.get_height() + 2 for b in blocks) + 14
-        rect = pygame.Rect(mouse[0] + 16, mouse[1] + 18, self.width, h)
+        width = max([self.width] + [b.get_width() + 20 for b in blocks])     # grow to fit wide pictures
+        rect = pygame.Rect(mouse[0] + 16, mouse[1] + 18, width, h)
         sw, sh = surf.get_size()
         if rect.right > sw - 6:
             rect.right = mouse[0] - 12

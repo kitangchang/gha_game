@@ -11,7 +11,7 @@ from ..theme import C, H, RARITY, W, mix, text_width
 from ..widgets import TOOLTIP, Button, alpha_rect, draw_text, draw_wrapped, panel, pill, pips
 from .layout import CONTENT_Y
 from ..icons import get_icons
-from .common import (consumable_lines, trait_colour, draw_gha_chip, draw_portrait, fatigue_color, gha_tooltip, rarity_gem,
+from .common import (consumable_lines, owned_tools, trait_colour, draw_gha_chip, draw_portrait, fatigue_color, gha_tooltip, rarity_gem,
                      relic_lines, trait_lines, training_lines)
 
 CARD_W = 336
@@ -94,14 +94,15 @@ class ShopTab:
             return
         y = CONTENT_Y
         draw_text(surf, "HIRE ANALYSTS", (16, y), 12, C.faint, "bold")
-        draw_text(surf, "New hires start on the bench. Hiring costs 1.5 weeks' salary up front.", (140, y), 12, C.faint)
         for i, (item, rect) in enumerate(zip(sh["hires"][:4], _row(len(sh["hires"][:4]), y + 22, 206))):
             self._hire_card(surf, rect, i, item, live_mouse)
         y = CONTENT_Y + 246
-        draw_text(surf, "TOOLS", (16, y), 12, C.faint, "bold")
-        r = draw_text(surf, "Permanent for the rest of the run.", (70, y), 12, C.faint)
+        r = draw_text(surf, "TOOLS", (16, y), 12, C.faint, "bold")
+        r = draw_text(surf, "Permanent", (r.right + 12, y), 12, C.faint)
         x = r.right + 28
         for rarity, colour in RARITY.items():
+            if rarity == "boss":          # boss tools only come from boss days
+                continue
             rarity_gem(surf, (x, y + 7), rarity, 4)
             r = draw_text(surf, rarity.title(), (x + 8, y), 11, colour, "semibold")
             x = r.right + 16
@@ -109,13 +110,13 @@ class ShopTab:
             self._relic_card(surf, rect, i, item, live_mouse)
         y = CONTENT_Y + 408
         slots = consumable_slots(data, run)
-        draw_text(surf, "SUPPLIES", (16, y), 12, C.supply, "bold")
-        draw_text(surf, f"One use each, during a shift. You can carry {slots}.", (90, y), 12, C.faint)
+        r = draw_text(surf, "SUPPLIES", (16, y), 12, C.supply, "bold")
+        draw_text(surf, f"Single use · carry {slots}", (r.right + 12, y), 12, C.faint)
         for i, (item, rect) in enumerate(zip(sh["consumables"][:4], _row(len(sh["consumables"][:4]), y + 22, 112))):
             self._supply_card(surf, rect, i, item, live_mouse, len(run.consumables) >= slots)
         y = CONTENT_Y + 560
-        draw_text(surf, "TRAINING", (16, y), 12, C.training, "bold")
-        draw_text(surf, "Applied to one analyst straight away.", (92, y), 12, C.faint)
+        r = draw_text(surf, "TRAINING", (16, y), 12, C.training, "bold")
+        draw_text(surf, "Applied now", (r.right + 12, y), 12, C.faint)
         for i, (item, rect) in enumerate(zip(sh["training"][:4], _row(max(3, len(sh["training"][:4])), y + 22, 112))):
             self._training_card(surf, rect, i, item, live_mouse)
         self._side(surf, live_mouse)
@@ -189,7 +190,7 @@ class ShopTab:
         draw_wrapped(surf, r["desc"], (tx, rect.y + 32, rect.right - tx - 12, 50), 12, C.dim, max_lines=2,
                      rich=True)
         if hover:
-            TOOLTIP.set(relic_lines(item["id"], self.data), 300)
+            TOOLTIP.set(relic_lines(item["id"], self.data, self.run), 340)
         if item["sold"]:
             self._sold(surf, rect, "BOUGHT")
             return
@@ -249,19 +250,20 @@ class ShopTab:
         if not run.relics:
             draw_text(surf, "None yet.", (rect.x + 14, y), 13, C.faint)
             y += 24
-        for rid in run.relics[:20]:
+        for rid in owned_tools(run, data)[:20]:
             r = data.relics[rid]
             row = pygame.Rect(rect.x + 8, y - 2, rect.width - 16, 24)
             if row.collidepoint(mouse):
                 pygame.draw.rect(surf, C.panel2, row, border_radius=5)
-                TOOLTIP.set(relic_lines(rid, data), 300)
+                TOOLTIP.set(relic_lines(rid, data, self.run), 340)
             icons = get_icons()
             if icons is not None:
                 icons.draw(surf, "tools", rid, (rect.x + 12, y - 1), 22)
             else:
                 rarity_gem(surf, (rect.x + 19, y + 9), r["rarity"], 5)
-            draw_text(surf, r["name"], (rect.x + 42, y + 1), 13, RARITY.get(r["rarity"], C.text), "semibold",
-                      max_width=rect.width - 60)
+            n = run.relics.count(rid)
+            draw_text(surf, r["name"] + (f"  x{n}" if n > 1 else ""), (rect.x + 42, y + 1), 13,
+                      RARITY.get(r["rarity"], C.text), "semibold", max_width=rect.width - 60)
             y += 26
         if len(run.relics) > 20:
             draw_text(surf, f"+{len(run.relics) - 20} more", (rect.x + 42, y), 12, C.faint)

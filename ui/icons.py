@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import pygame
 
+from game.art_check import png_files
 from game.data import ROOT
 
 from .theme import C, RARITY, Fonts, mix
@@ -91,9 +92,9 @@ class IconBank:
             folder = ITEM_DIR / cat
             if not folder.is_dir():
                 continue
-            for path in sorted(folder.glob("*.png")):
+            for path in png_files(folder):
                 try:
-                    self.images[(cat, path.stem)] = pygame.image.load(str(path)).convert_alpha()
+                    self.images[(cat, path.stem.lower())] = pygame.image.load(str(path)).convert_alpha()
                 except (pygame.error, OSError) as exc:
                     self.errors.append(f"{cat}/{path.name}: {exc}")
 
@@ -101,14 +102,14 @@ class IconBank:
         out = {}
         for cat in CATEGORIES:
             ids = items_for(self.data, cat)
-            out[cat] = (sum(1 for i in ids if (cat, i) in self.images), len(ids))
+            out[cat] = (sum(1 for i in ids if (cat, i.lower()) in self.images), len(ids))
         return out
 
     def icon(self, category: str, item_id: str, size: int) -> pygame.Surface:
         key = (category, item_id, size)
         img = self._cache.get(key)
         if img is None:
-            src = self.images.get((category, item_id))
+            src = self.images.get((category, item_id.lower()))
             if src is None:
                 img = draw_placeholder(self.data, category, item_id, size)
             elif src.get_size() == (size, size):

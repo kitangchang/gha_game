@@ -45,7 +45,12 @@ class RichText:
         for t in data.training.values():
             literal(t["name"], C.training)
         for t in data.traits.values():
-            literal(t["name"], TRAIT_COLOURS.get(t.get("kind", "good"), C.good))
+            tags = t.get("tags") or []
+            colour = data.tags[tags[0]]["color"] if tags and tags[0] in data.tags else \
+                TRAIT_COLOURS.get(t.get("kind", "good"), C.good)
+            literal(t["name"], colour)
+        for tag in getattr(data, "tags", {}).values():
+            rules.append((re.escape(tag["name"]) + r" tags?", tag["color"], True))
         for team in data.teams:
             name = team["name"]
             for form in (f"{name} team", f"Team {name}", f"{name.upper()} TEAM", name):
@@ -107,12 +112,24 @@ class RichText:
             line: list = []
             x = 0
             space_w = text_width(" ", size)
+            group = 0               # where the current unbreakable run of tokens starts in `line`
             for word, col, weight, space in self.tokens(para, colour):
                 w = text_width(word, size, weight)
                 gap = space_w if (space and line) else 0
-                if line and x + gap + w > width and space:
-                    lines.append(line)
-                    line, x, gap = [], 0, 0
+                if space or not line:
+                    group = len(line)
+                if line and x + gap + w > width:
+                    if space:
+                        lines.append(line)
+                        line, x, gap, group = [], 0, 0, 0
+                    elif group > 0:
+                        # e.g. "(Volcano" - take the whole run to the next line, not just this piece
+                        carry = line[group:]
+                        lines.append(line[:group])
+                        base = carry[0][3]
+                        line = [[t[0], t[1], t[2], t[3] - base] for t in carry]
+                        x -= base
+                        group = 0
                 line.append([word, col, weight, x + gap])
                 x += gap + w
             lines.append(line)

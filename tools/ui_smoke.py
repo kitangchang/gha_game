@@ -47,6 +47,9 @@ def main():
     shot(app, "01c_centre")
     app.scene.start_run("short")
     planning = app.scene
+    shot(app, "01d_starting_tool")
+    if planning.start_pick.pending:
+        planning.start_pick.choose(planning.start_pick.options[0])
     shot(app, "02_planning_roster")
     planning.set_tab("shop")
     shot(app, "03_planning_shop")

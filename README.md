@@ -11,7 +11,6 @@ Prototype: everything is meant to be tuned. Almost every number lives in `data/*
 ## Running it
 
 ```
-extract data/catalog/archive.7z
 pip install -r requirements.txt      # pygame-ce (plain pygame 2.1+ also works)
 python main.py
 ```
@@ -56,19 +55,20 @@ unlock track, with tooltips.
    auto-assign. Each analyst works through their queue in order.
 3. **Summary.** Trust breakdown, funding (base grant + performance bonus + trust bonus,
    minus salaries), level-ups, leave recoveries, burnouts and everyone's long-term fatigue.
+   If the week had a boss day you then pick a reward tool (see **Boss days** below).
 
 **The ops room.** Two red wall clocks show New Zealand time (left) and UTC (right),
 with daylight saving for real catalogue days. Below them are four equal screens: volcano
 webcams (day and night; steam shows when a volcano task is open, nearly always on
 Whakaari), a map of the last day's seismicity (DART buoys appear in red while in event
-mode), the seismic traces, and the DARTS board (one column per buoy, A–L, red while a
+mode), the seismic traces, and the DART board (one column per buoy, A–L, red while a
 buoy is in event mode). The clocks and screens freeze while the game is paused. The top
 left of the top bar shows the week, the day and which catalogue day the earthquakes come
 from. Tools you own are listed at the top of the right-hand column, above the SOP
 tracker, Slay-the-Spire style; hover one to see what it does.
 
-**Shifts and teams.** Three 8-hour shifts a day: morning 0600–1400, late 1400–2200
-and night 2200–0600. Each team works two mornings, two lates and two nights, then has
+**Shifts and teams.** Three 8-hour shifts a day: morning 0600-1400, late 1400-2200
+and night 2200-0600. Each team works two mornings, two lates and two nights, then has
 four days off. Blue starts on the first morning and the teams follow in roster order two
 days apart, so exactly one team is on each shift and the pattern carries on from week to
 week. The rotation, team names/colours and shift times live in `data/config.json`
@@ -140,9 +140,46 @@ but can't kill you on its own; ignoring SOP steps can. Public expectations rise 
 (trust losses +6% per week).
 
 **Roguelike bits.** Days are pre-picked at the start of the run by workload percentile,
-ramping up through the run and through each week. The final day is a big one. Some weeks
-are special (Conference week, Swarm season, Flu season…). Two or three '?' days a week
-bring a random event card with choices (29 events). Tools have rarities.
+ramping up through the run and through each week. Some weeks are special (Conference
+week, Swarm season, Flu season...). Two or three '?' days a week bring a random event card
+with choices (29 events). Tools have rarities.
+
+**Day alerts.** Each day card on the planning screen shows a '!' when the day is busier
+than usual: yellow from the 50th workload percentile, orange from the 75th, red from the
+90th (`difficulty.alert_levels`). Without the Aftershock Forecast Model that's all you
+get. With it, each day shows its activity, the biggest magnitude, and what's behind it
+(e.g. "Large earthquake, M6.5+ near Seddon" or "Earthquake swarm near Taupo (60 events)").
+A day counts as a *large earthquake* with an M6+, a *swarm* with 25+ events in one
+~25 km box making up 30%+ of the day, a *strong earthquake* with an M5+, otherwise
+*busy* (`game/forecast.py`).
+
+**Starting tool.** When a run begins you pick one of three tools (mostly boss tools, which
+otherwise only come from boss days). "Back to planning" lets you look at your team first;
+the green button in the top bar reopens the choice, and you can't start the week until you've
+picked one or chosen to start without.
+
+**Contracts.** Gold task cards are paid work: commercial reports, insurance assessments, data
+requests, a council map review, a school talk, or building an internal app. Finish one on time
+with no errors and it pays out (money, trust or a new tool). If nobody gets to it in time it
+lapses, with no trust lost. It's your call whether the team has time to spare.
+
+**Boss days.** Every Sunday is a boss day (`difficulty.weekly_boss`): its target
+percentile is raised by `weekly_boss_boost` and it prefers a catalogue day with a large
+quake or a swarm. Its card shows a red '!' and a BOSS pill, and its hover text says
+whether it's a swarm or a large quake. The run's last day is the FINAL boss
+(`boss_percentile`..`boss_max_percentile`). Survive a week with a boss day and you choose
+one of `boss_reward_choices` (3) tools, drawn by `boss_reward_weights`: **boss** tools
+(only from boss days, more unlock with centre level), rare and legendary. If you close the
+game before choosing, the choice comes up on the planning screen.
+
+**Tags.** Traits, tools and supplies have tags (`data/tags.json`): Caffeine, Night,
+Wellbeing, Teamwork, Tech, Media, Science. A tag counts once for every tool you own,
+every supply in the cupboard and every trait on an active analyst that carries it. Some
+tools grow with your tags: the Good Coffee Machine gives +1% speed for every Caffeine tag
+(and is a Caffeine tag itself). The tally on the right of the tools bar shows your totals;
+hover a tag for where it comes from, and hover a tag-scaling tool for its current bonus.
+Traits are coloured by their tag rather than good/bad. Boss tools are mostly built around
+one tag each (The Big Whiteboard counts all of them).
 
 ## Controls
 
@@ -178,7 +215,7 @@ one, a synthetic NZ catalogue is generated. Formats it understands:
 
 Times are treated as UTC and converted to New Zealand time, daylight saving included
 (NZST/NZDT, worked out from the NZ rules since 1974, so no time zone database is needed).
-Days run 06:00–06:00 NZ time (`time.day_start_hour`). Set `catalog.nz_daylight_saving` to
+Days run 06:00-06:00 NZ time (`time.day_start_hour`). Set `catalog.nz_daylight_saving` to
 false to use a fixed `catalog.utc_offset_hours` instead. Check what the game sees with:
 
 ```
@@ -205,6 +242,10 @@ The first load of a big file takes a few seconds; after that a cache in
 | `difficulty.event_volume_scale` | <1 randomly drops small events (≤ `volume_scale_max_mag`) |
 | `difficulty.max_events_per_day` | Thins out the smallest events on extreme aftershock days |
 | `difficulty.expectation_growth_per_week` | Trust-loss multiplier growth per week |
+| `difficulty.weekly_boss`, `weekly_boss_boost` | Sunday boss days and how much harder they are |
+| `difficulty.boss_final_day`, `boss_percentile`, `boss_max_percentile` | The final boss day |
+| `difficulty.alert_levels` | Percentiles for the yellow/orange/red '!' on planning days |
+| `difficulty.boss_reward_choices`, `boss_reward_weights` | Boss reward: how many tools to choose from, rarity odds |
 | `events.random_event_days_min/max` | '?' days per week |
 | `balance.work_scale` | Global task duration multiplier |
 | `eq.tiers` | Per-magnitude complexity, work, deadline, importance |
@@ -215,6 +256,7 @@ The first load of a big file takes a few seconds; after that a cache in
 | `rating.*` | Trust penalties, bonus and drain caps |
 | `economy.*` | Grant, bonuses, salaries (incl. per trait kind), prices, shop slots, rarity weights |
 | `run.*` | Run lengths, starting trust/budget/team size, desks, call-in cost |
+| `run.starting_tool` | The starting tool picked at the start of a run: `enabled`, `choices`, rarity `weights` |
 
 `data/dart.json` holds the buoys and the trigger rule (`min_mag`, `radius_km_at_min_mag`,
 `radius_mult_per_mag`, `wave_speed_km_per_min`, `event_mode_hours`).
@@ -229,32 +271,52 @@ Every JSON list can hold `{"_doc": "..."}` entries for notes; they're ignored.
 ```
 * `stat`: `speed`, `work`, `error`, `skill` (use `op: add`), `fatigue_gain`,
   `fatigue_recovery`, `ltf_gain`, `sick_chance`, `xp`, `rating_loss`, `rating_gain`,
-  `payout`, `shop_price`
+  `payout`, `shop_price`, `call_in_cost`, `weekly_bonus`
 * `when` (all optional): `shift` (`morning`/`late`/`night`, or a list), `skill`, `kind`
   (`eq`/`sop`/`bau`/`staffing`), `task_type` (list), `min_complexity`, `max_complexity`,
   `min_mag`, `max_mag`, `region` (`local`/`kermadec`/`elsewhere`), `working` (bool),
   `base_skill_max`
 * `target` (traits only): `self`, or `team` = everyone else on the same shift
+* `per_tag` (optional): apply the modifier once per matching tag the run has (a tag id
+  from `tags.json`, or `"any"` for every tag), with `max_tags` as an optional cap. It
+  scales linearly: `{"stat": "speed", "op": "mult", "value": 1.01, "per_tag": "caffeine"}`
+  is +1% speed per Caffeine tag (5 tags = ×1.05); with `op: add` the value is multiplied
+  by the count.
 
-**Tools** (`relics.json`): `id, name, rarity (common|uncommon|rare|legendary), desc, modifiers,
-specials, unlock_level`. Specials: `error_shield_per_shift`, `auto_review {max_mag,
+**Tags** (`tags.json`): `id, name, color, desc`. Give any trait, tool, supply or training
+item `"tags": ["caffeine", ...]`. Tags on tools, supplies in the cupboard and traits of
+active analysts are counted (training tags are for display only).
+
+**Tools** (`relics.json`): `id, tags, name, rarity (common|uncommon|rare|legendary|boss), desc,
+modifiers, specials, unlock_level`. `boss` tools never appear in the shop; they're only
+offered as boss-day rewards (still gated by `unlock_level`). Optional: `"repeatable": true`
+(can be owned more than once; each copy counts as a tag and applies its modifiers again),
+`"reward_weight"` (how likely in boss rewards, 1 = normal), `"on_gain"` (one-off `budget` or
+`rating` effects when you get it). The `weekly_bonus` stat (`op: add`) adds $k to weekly funding. Specials: `error_shield_per_shift`, `auto_review {max_mag,
 after_minutes}`, `auto_assign {max_mag}`, `forecast`, `extra_desks`, `random_task {task,
 chance_per_shift}`, `consumable_slots`, `shop_extra_relic`.
 
 **Unlocks:** add `"unlock_level": N` to any tool, supply or training item; without it the
 item is available from level 1.
 
-**Traits** (`traits.json`): `id, name, kind (good|balanced|bad), weight, desc, modifiers`.
+**Traits** (`traits.json`): `id, tags, name, kind (good|balanced|bad), weight, desc, modifiers`.
+A trait's colour comes from its first tag (untagged traits fall back to good/balanced/bad).
 
 **BAU tasks** (`bau_tasks.json`): `id, name, skill (or "any"), work, complexity, deadline,
 importance, desc, schedule`. `schedule.type` is `times` (`at: ["HH:MM", …]` every day),
 `daily` (`at: "HH:MM"`), `random` (`per_day`), `every_shift` or `none` (only spawned by
 events/tools/supplies).
 
+**Contracts** (paid work, also in `bau_tasks.json`): give a task a `"reward"` list of effects
+(`budget`, `rating`, `relic` with `id` or `rarities` and an optional preferred `tag`, `consumable`, `modifier`) and it becomes
+contract work: a gold card that pays out if it's finished on time with no errors. If nobody
+finishes it before the deadline it lapses with no trust lost (`"expires": false` makes it go
+overdue like a normal task instead). `"reward_text"` overrides the reward shown on the card.
+
 **Random events** (`events.json`): `id, title, text, weight, options[]`. Each option has
 `label, hint, requires {on_shift_min, budget}, effects[]`.
 
-**Supplies** (`consumables.json`): `id, name, short, cost, target (none|gha|task), desc,
+**Supplies** (`consumables.json`): `id, tags, name, short, cost, target (none|gha|task), desc,
 effects[], unlock_level`.
 
 **Effects** (events and supplies): `rating`, `budget`, `fatigue` / `ltf` (`who`: on_shift,
@@ -287,13 +349,14 @@ files, so a new tool, supply, trait or skill is coloured as soon as you add it.
 |---|---|
 | Skills (pills like `SEI4`, names like "Tsunami") | each skill's `color` in `skills.json` |
 | Teams ("Red team", portraits, chips, desks) | `roster.teams[].color` |
-| Tools | by rarity: Common grey, Uncommon green, Rare blue, Legendary orange |
+| Tools | by rarity: Common grey, Uncommon green, Rare blue, Legendary orange, Boss magenta |
 | Supplies | pink |
 | Training | teal |
-| Traits | green (good) / amber (balanced) / red (bad) |
+| Tags ("Caffeine tag") and traits | each tag's `color` in `tags.json` (a trait uses its first tag) |
 | SOPs | purple |
 | Shifts ("night shift") | each shift's `color` |
 | Money, fatigue, long-term fatigue, trust | gold, amber, orange, bold white |
+| Day alerts ('!' on planning days) | yellow / orange / red by workload percentile; boss days red |
 
 The colours of the fixed categories live in `ui/theme.py` (`C`, `RARITY`,
 `TRAIT_COLOURS`); the rules are in `ui/richtext.py`. The How to play screen has a colour
@@ -330,6 +393,12 @@ Any square size works. Items without a PNG get a generated badge.
 webcam screen; the label comes from the file name (`3_ngauruhoe.png` → Ngauruhoe). Draw
 them in daylight; the game darkens them at night.
 
+**Fonts** (`assets/fonts/`): set `display.font` in `config.json` to a .ttf/.otf there
+(`font_semibold` / `font_bold` for separate weight files, `font_scale`, `fake_bold`).
+If the font has no space character the game spaces words itself, and any character the
+font can't draw (dashes, arrows, ×, ½, macrons...) is swapped for a plain stand-in
+(`-`, `->`, `x`, `1/2`, `o`); the list is `GLYPH_FALLBACKS` in `ui/theme.py`.
+
 The shipped art is all placeholder, drawn by `tools/make_placeholder_avatars.py`,
 `make_placeholder_items.py` and `make_placeholder_webcams.py` (`--force` redraws).
 
@@ -346,12 +415,15 @@ game/                   simulation (no pygame): runs headless
   dart.py               which DART buoys a quake sets off
   tz.py                 NZ time and UTC, with daylight saving (no time zone database needed)
   avatars.py            which avatar piece each analyst gets (file names only)
+  tags.py               counting tags and scaling per_tag modifiers
+  forecast.py           what kind of day a catalogue day is (large quake, swarm...), day alerts
   tasks.py, effects.py, modifiers.py, shop.py, bot.py, models.py, save.py
 ui/                     pygame front end
   avatars.py, icons.py, webcams.py   load and cache the art
   richtext.py           automatic colour coding of names in any text
   scenes/               title, slots, centre, planning (roster/shop/team), shift (+ wall
-                        clocks and screens, map, modals), summary, gallery
+                        clocks and screens, map, modals), summary, boss_reward, options,
+                        gallery
 assets/                 avatars, item icons, webcams, fonts (Inter, SIL Open Font License)
 data/                   all content and balance (JSON)
 tools/

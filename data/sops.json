@@ -3,7 +3,7 @@
   "_doc": "Regions use lon 0-360. A region of 'elsewhere' matches anything outside the named regions. Task 'requires' may name 'prelim', 'confirm' or another task type in the same event. visible: 'locked' = shown greyed out until its requirements are done; 'on_unlock' = hidden until then.",
 
   "regions": {
-    "local":    {"name": "Local",    "lat": [-47.5, -34.0], "lon": [166.0, 179.0]},
+    "local":    {"name": "Local",    "lat": [-45.0, -37.0], "lon": [163.0, 185.0]},
     "kermadec": {"name": "Kermadec", "lat": [-33.0, -25.0], "lon": [177.0, 191.0]}
   },
 
@@ -13,10 +13,10 @@
     "send_eat":         {"name": "Send EAT to NEMA",        "skill": "comms",   "work": 8, "complexity": 2, "deadline": 20, "importance": 6.0},
     "reassess_tsunami": {"name": "Reassess tsunami threat", "skill": "tsunami", "work": 20, "complexity": 4, "deadline": 45, "importance": 4.0},
     "send_eat2":        {"name": "Send EAT2 to NEMA",       "skill": "comms",   "work": 8, "complexity": 2, "deadline": 20, "importance": 4.0},
-    "activate_tep":     {"name": "Activate TEP",            "skill": "tsunami", "work": 10, "complexity": 2, "deadline": 30, "importance": 5.0},
+    "activate_tep":     {"name": "Activate TEP",            "skill": "tsunami", "work": 10, "complexity": 3, "deadline": 30, "importance": 4.0},
     "public_comms":     {"name": "Prepare public comms",    "skill": "comms",   "work": 25, "complexity": 3, "deadline": 60, "importance": 3.0},
     "assess_dart":      {"name": "Assess DART signals",     "skill": "tsunami", "work": 12, "complexity": 3, "deadline": 30, "importance": 3.5},
-    "check_dart":       {"name": "Check DART data",         "skill": "tsunami", "work": 4,  "complexity": 2, "deadline": 45, "importance": 0.9}
+    "check_dart":       {"name": "Check DART data",         "skill": "tsunami", "work": 6,  "complexity": 2, "deadline": 30, "importance": 1.2}
   },
 
   "sops": [
@@ -65,8 +65,8 @@
      ]},
 
     {"id": "significant", "name": "Significant Interest", "short": "SIGNIFICANT", "color": [230, 150, 210],
-     "triggers": [{"region": "local", "min_mag": 4.0},
-                  {"region": "local", "min_mag": 3.5, "max_depth": 15}],
+     "triggers": [{"region": "local", "min_mag": 4.7},
+                  {"region": "local", "min_mag": 4.0, "max_depth": 12}],
      "prelim_deadline": 30, "confirm_deadline": 90,
      "tasks": [
        {"type": "page_duty"},

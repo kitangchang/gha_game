@@ -6,7 +6,7 @@ import pygame
 from game import shop
 from game.util import fmt_money
 
-from ..theme import C, H, W, mix
+from ..theme import C, H, W, mix, text_width
 from ..widgets import TOOLTIP, Button, bar, draw_text, panel, pill, pips
 from .layout import CONTENT_Y
 from .common import draw_portrait, fatigue_color, group_label, group_of, team_color_of, trait_colour, trait_lines
@@ -95,26 +95,29 @@ class TeamTab:
         draw_text(surf, sub, (r.right + 8, rect.y + 37), 12, C.dim, max_width=rect.right - r.right - 24)
         sm = data.config["skill_model"]
         col_w = (rect.right - 12 - tx) // 2
+        name_w = max(text_width(data.skill_by_key[k]["name"], 12, "semibold") for k in data.skill_keys) + 10
         for j, k in enumerate(data.skill_keys):
             col, row = j // 3, j % 3
             sx, sy = tx + col * col_w, rect.y + 66 + row * 22
             lvl = g.skills.get(k, 1)
             sk_col = data.skill_by_key[k]["color"]
             draw_text(surf, data.skill_by_key[k]["name"], (sx, sy), 12, sk_col, "semibold")
-            pips(surf, (sx + 76, sy + 3), lvl, sm["max_level"], sk_col, 9, 3, off=mix(sk_col, C.panel, 0.82))
-            bar_x, bar_w = sx + 142, max(30, col_w - 152)
+            pips(surf, (sx + name_w, sy + 3), lvl, sm["max_level"], sk_col, 9, 3, off=mix(sk_col, C.panel, 0.82))
+            bar_x = sx + name_w + 66
+            bar_w = max(20, col_w - (bar_x - sx) - 10)
             if lvl < sm["max_level"]:
                 need = sm["xp_to_next"][min(lvl - 1, len(sm["xp_to_next"]) - 1)]
                 bar(surf, (bar_x, sy + 6, bar_w, 4), g.xp.get(k, 0.0) / need, mix(sk_col, C.panel, 0.45))
             else:
                 draw_text(surf, "MAX", (bar_x, sy), 10, C.good, "bold")
         y = rect.y + 146
-        draw_text(surf, "Fatigue", (rect.x + 18, y), 12, C.dim)
-        bar(surf, (rect.x + 90, y + 4, 180, 7), g.fatigue / 100.0, fatigue_color(g.fatigue))
-        draw_text(surf, f"{g.fatigue:.0f}", (rect.x + 278, y), 12, C.dim)
-        draw_text(surf, "Long-term", (rect.x + 318, y), 12, C.dim)
-        bar(surf, (rect.x + 390, y + 4, 180, 7), g.ltf / 100.0, fatigue_color(g.ltf))
-        draw_text(surf, f"{g.ltf:.0f}", (rect.x + 578, y), 12, C.dim)
+        half = (rect.width - 36) // 2
+        for k, (label, value) in enumerate((("Fatigue", g.fatigue), ("Long-term", g.ltf))):
+            x0 = rect.x + 18 + k * (half + 12)
+            lr = draw_text(surf, label, (x0, y), 12, C.dim)
+            nr = draw_text(surf, f"{value:.0f}", (x0 + half - 8, y), 12, C.dim, anchor="topright")
+            bx = lr.right + 10
+            bar(surf, (bx, y + 4, max(20, nr.x - 10 - bx), 7), value / 100.0, fatigue_color(value))
         tx, ty = rect.x + 18, rect.y + 172
         for tid in g.traits:
             t = data.traits[tid]

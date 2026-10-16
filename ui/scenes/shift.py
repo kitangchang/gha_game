@@ -7,6 +7,7 @@ import pygame
 
 from game.engine import AUTO_MODES
 from game.run import consumable_slots, finish_week
+from game.util import fmt_money
 
 from ..app import Scene
 from ..icons import get_icons
@@ -69,7 +70,7 @@ class ShiftScene(Scene):
         self.hover_task = None
         self.map_highlight = None
         self.map = MapPanel(self.data, MAP_RECT)
-        self.sort_button = Button((INBOX.right - 116, INBOX.y + 9, 104, 26), "Sort: urgency", self.cycle_sort, "ghost",
+        self.sort_button = Button((INBOX.right - 162, INBOX.y + 9, 150, 26), "Sort: urgency", self.cycle_sort, "ghost",
                                   12, tooltip="Change inbox order (Tab)")
         self.hud_buttons: list = []
         self.inbox_buttons: list = []
@@ -106,7 +107,7 @@ class ShiftScene(Scene):
             x += bw + 6
         buttons.append(Button((callin_x, 18, 96, 44), "Call in", self.open_callin, "secondary", 13,
                               tooltip=[("Call in an off-duty analyst for the rest of this shift.", C.text, 13),
-                                       (f"Costs ${self.data.config['run']['call_in_cost']:.1f}k overtime.", C.dim, 12)]))
+                                       (f"Costs {fmt_money(self.eng.call_in_cost())} overtime.", C.dim, 12)]))
         self._build_auto()
         sx = speed_x
         self.pause_button = Button((sx, 16, 44, 44), "", self.toggle_pause, "primary" if self.paused else "secondary")
@@ -278,11 +279,11 @@ class ShiftScene(Scene):
         tids = sorted(tids, key=lambda t: order.get(t, 10_000))
         if index is None:
             for tid in tids:
-                eng.assign(tid, gid)
+                eng.assign(tid, gid, by_player=True)
             return
         base = index - sum(1 for q in g.queue[:index] if q in tids)
         for k, tid in enumerate(tids):
-            eng.assign(tid, gid, base + k)
+            eng.assign(tid, gid, base + k, by_player=True)
 
     # --------------------------------------------------------------- update
     def running(self) -> bool:
@@ -570,7 +571,7 @@ class ShiftScene(Scene):
         self.tools_rect, self.tool_size, self.tools_per_row, self.sop_rect, self.log_rect = right_column(self)
         draw_tools(self, surf, live)
         draw_sop(self, surf, live)
-        draw_log(self, surf)
+        draw_log(self, surf, live)
         draw_hud(self, surf, live)
         self._draw_pause_icon(surf)
         draw_toasts(self, surf)

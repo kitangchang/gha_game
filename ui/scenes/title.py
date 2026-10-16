@@ -1,7 +1,8 @@
 """Title screen."""
 from __future__ import annotations
 
-import math
+import random
+from collections import namedtuple
 
 import pygame
 
@@ -12,6 +13,10 @@ from ..theme import C, H, W
 from ..widgets import Button, draw_text, panel
 from .help import HelpOverlay
 
+BG_WINDOW = 90.0      # game minutes across the screen
+BG_SPEED = 1.2        # game minutes per real second (a slow, calm scroll)
+_BgQuake = namedtuple("_BgQuake", "uid t mag lat lon depth")
+
 
 class TitleScene(Scene):
     def __init__(self, app):
@@ -21,6 +26,11 @@ class TitleScene(Scene):
         self.message = ""
         self.buttons: list = []
         self.last = None
+        self.bg_day = None              # background seismogram: a catalogue day replayed slowly
+        self.bg_events: list = []
+        self.bg_state: dict = {}
+        self.bg_now = 0.0
+        self.bg_end = 0.0
 
     def on_enter(self):
         self.app.profile = None
@@ -45,11 +55,17 @@ class TitleScene(Scene):
         self.buttons.append(Button((cx - 260, y, 255, 46), "How to play", self.help.toggle, "ghost", 15))
         self.buttons.append(Button((cx + 5, y, 255, 46), "Avatars", self._gallery, "ghost", 15,
                                    tooltip="Preview the analyst art in assets/avatars/"))
-        self.buttons.append(Button((cx - 260, y + 56, 520, 46), "Quit", self._quit, "ghost", 15))
+        self.buttons.append(Button((cx - 260, y + 56, 255, 46), "Options", self._options, "ghost", 15,
+                                   tooltip="Window size, fullscreen and scaling"))
+        self.buttons.append(Button((cx + 5, y + 56, 255, 46), "Quit", self._quit, "ghost", 15))
 
     def _gallery(self):
         from .gallery import GalleryScene
         self.app.change(GalleryScene(self.app))
+
+    def _options(self):
+        from .options import OptionsScene
+        self.app.change(OptionsScene(self.app))
 
     def _quit(self):
         self.app.running = False
@@ -77,24 +93,32 @@ class TitleScene(Scene):
 
     def update(self, dt: float):
         self.t += dt
+        self.bg_now += dt * BG_SPEED
 
     def _draw_traces(self, surf):
-        rows = 10
-        for r in range(rows):
-            base = 110 + r * (H - 200) / (rows - 1)
-            phase = r * 1.7
-            pts = []
-            burst_c = ((self.t * 0.6 + r * 0.37) % 3.0) * W / 2.2
-            for i in range(0, W + 8, 8):
-                x = i
-                noise = (math.sin(x * 0.051 + phase + self.t * 3.1) * 1.6 + math.sin(x * 0.137 + phase * 2 + self.t * 5.3) * 1.1
-                         + math.sin(x * 0.29 + self.t * 7.7 + r) * 0.7)
-                d = abs(x - burst_c)
-                amp = 20 * math.exp(-d / 70.0) * (0.6 + 0.4 * math.sin(r + 1.3)) if d < 450 else 0
-                y = base + noise + amp * math.sin(x * 0.45 + self.t * 9)
-                pts.append((x, y))
-            col = (28, 40, 54) if r % 2 else (24, 34, 46)
-            pygame.draw.aalines(surf, col, False, pts)
+        """A real (or synthetic) catalogue day replayed as faint seismic traces behind the menu."""
+        from .wall import draw_seismogram
+        cat = self.app.catalog
+        if cat is None or not cat.days:
+            return
+        if self.bg_day is None or self.bg_now > self.bg_end:
+            self._pick_day(cat)
+        area = pygame.Rect(0, 70, W, H - 140)
+        draw_seismogram(surf, area, self.bg_events, self.bg_now, self.bg_state, line_col=(34, 52, 66),
+                        label_col=None, base_col=None, window=BG_WINDOW, step=3,
+                        noise_ref=6.0)
+
+    def _pick_day(self, cat):
+        """A random day with something worth seeing in it, started just before its biggest quake."""
+        rng = random.Random()
+        busy = [d for d in cat.days if d.max_mag >= 3.5] or cat.days
+        day = rng.choice(busy)
+        self.bg_day = day
+        self.bg_events = [_BgQuake(i, e[0], e[1], e[2], e[3], e[4]) for i, e in enumerate(day.events)]
+        biggest = max(day.events, key=lambda e: e[1])[0] if day.events else 0.0
+        self.bg_now = max(BG_WINDOW * 0.2, biggest - BG_WINDOW * 0.15)
+        self.bg_end = max(e[0] for e in day.events) + BG_WINDOW if day.events else BG_WINDOW
+        self.bg_state = {}
 
     def draw(self, surf):
         self._draw_traces(surf)

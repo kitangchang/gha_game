@@ -8,6 +8,8 @@ special modifiers, and temporary modifiers from events and supplies.
 """
 from __future__ import annotations
 
+from .tags import scaled_value
+
 STATS = {
     "speed",            # task speed multiplier
     "work",             # task work multiplier (lower = less work)
@@ -22,6 +24,8 @@ STATS = {
     "rating_gain",      # public trust gains
     "payout",           # weekly funding
     "shop_price",       # shop prices
+    "call_in_cost",     # overtime cost of calling someone in
+    "weekly_bonus",     # extra weekly funding in $k (use op "add")
 }
 
 WHEN_KEYS = {
@@ -101,8 +105,11 @@ class ModifierSet:
         self.global_mods: list[dict] = []
         self.temp: list[tuple[float, dict]] = []   # (expires_at, modifier)
         self.now = 0.0
+        self.tag_counts: dict = {}
 
-    def rebuild(self, relic_ids, special_week_id=None):
+    def rebuild(self, relic_ids, special_week_id=None, tag_counts=None):
+        if tag_counts is not None:
+            self.tag_counts = dict(tag_counts)
         mods = []
         for rid in relic_ids:
             mods.extend(self.data.relics[rid].get("modifiers", []))
@@ -142,7 +149,7 @@ class ModifierSet:
         value = 1.0
         for m in self._iter(ctx):
             if m["stat"] == stat and m.get("op", "mult") == "mult" and matches(m.get("when"), ctx):
-                value *= m["value"]
+                value *= scaled_value(m, self.tag_counts)
         return value
 
     def add(self, stat: str, ctx: Ctx | None = None) -> float:
@@ -150,7 +157,7 @@ class ModifierSet:
         value = 0.0
         for m in self._iter(ctx):
             if m["stat"] == stat and m.get("op") == "add" and matches(m.get("when"), ctx):
-                value += m["value"]
+                value += scaled_value(m, self.tag_counts)
         return value
 
 

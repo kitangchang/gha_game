@@ -11,15 +11,15 @@
    "desc": "Weekly catch-up with the volcano team on unrest and alert levels.", "schedule": {"type": "daily", "at": "09:30", "days": ["Mon"]}},
 
   {"id": "seismic_daily_report", "name": "Seismic Daily Report", "skill": "seismic", "work": 30, "complexity": 1, "deadline": 120, "importance": 0.5,
-   "desc": "Summarise the day's seismic activity for the duty team.", "schedule": {"type": "daily", "at": "05:30"}},
+   "desc": "Summarise the day's seismic activity for the duty team.", "schedule": {"type": "daily", "at": "05:00"}},
 
   {"id": "volcano_daily_report", "name": "Volcanic Daily Report", "skill": "volcano", "work": 30, "complexity": 1, "deadline": 120, "importance": 0.5,
-   "desc": "Summarise the day's volcanic activity for the duty team.", "schedule": {"type": "daily", "at": "05:30"}},
+   "desc": "Summarise the day's volcanic activity for the duty team.", "schedule": {"type": "daily", "at": "05:00"}},
 
-  {"id": "station_outage", "name": "Seismic station outage", "skill": "systems", "work": 25, "complexity": 2, "deadline": 180, "importance": 0.5,
+  {"id": "station_outage", "name": "Seismic station outage", "skill": "systems", "work": 75, "complexity": 2, "deadline": 180, "importance": 0.5,
    "desc": "A station has stopped sending data.", "schedule": {"type": "random", "per_day": 0.2}},
 
-  {"id": "data_gap", "name": "Data gap investigation", "skill": "systems", "work": 35, "complexity": 2, "deadline": 240, "importance": 0.2,
+  {"id": "data_gap", "name": "Data gap investigation", "skill": "systems", "work": 90, "complexity": 2, "deadline": 240, "importance": 0.2,
    "desc": "A chunk of waveform data is missing.", "schedule": {"type": "random", "per_day": 0.2}},
 
   {"id": "public_enquiry", "name": "Public enquiry email", "skill": "comms", "work": 12, "complexity": 1, "deadline": 240, "importance": 0.4,
@@ -52,10 +52,10 @@
   {"id": "tep_test_page", "name": "TEP Test Page", "skill": "comms", "work": 35, "complexity": 2, "deadline": 120, "importance": 1.0,
    "desc": "Set up the weekly TEP test page and meeting.", "schedule": {"type": "daily", "at": "14:30", "days": ["Mon"]}},
 
-  {"id": "duty_team_retrospective", "name": "Duty Team Retrospective Email", "skill": "comms", "work": 50, "complexity": 1, "deadline": 240, "importance": 0.3,
+  {"id": "duty_team_retrospective", "name": "Duty Team Retrospective Email", "skill": "comms", "work": 90, "complexity": 1, "deadline": 240, "importance": 0.3,
    "desc": "Prepare and send the weekly summary of duty team roster.", "schedule": {"type": "daily", "at": "01:00", "days": ["Tue"]}},
 
-  {"id": "ot_retrospective", "name": "OT Retrospective Email", "skill": "comms", "work": 45, "complexity": 3, "deadline": 240, "importance": 0.3,
+  {"id": "ot_retrospective", "name": "OT Retrospective Email", "skill": "comms", "work": 90, "complexity": 2, "deadline": 240, "importance": 0.3,
    "desc": "Prepare and send the weekly summary of staffing overtime and leave.", "schedule": {"type": "daily", "at": "01:00", "days": ["Tue"]}},
 
   {"id": "dart_health_check", "name": "DART Health Check", "skill": "tsunami", "work": 60, "complexity": 2, "deadline": 360, "importance": 0.5,
@@ -64,63 +64,93 @@
   {"id": "toast_check", "name": "TOAST Health Check", "skill": "tsunami", "work": 30, "complexity": 2, "deadline": 120, "importance": 0.5,
    "desc": "Test the functionality of the TOAST tool.", "schedule": {"type": "daily", "at": "18:00", "days": ["Wed"]}},
 
-  {"id": "cdem_meeting", "name": "CDEM Meeting", "skill": "comms", "work": 30, "complexity": 2, "deadline": 180, "importance": 1.0,
+  {"id": "cdem_meeting", "name": "CDEM Meeting", "skill": "comms", "work": 30, "complexity": 4, "deadline": 240, "importance": 1.0,
    "desc": "Present the seismic update to the CDEM groups.", "schedule": {"type": "daily", "at": "11:30", "days": ["Thur"]}},
 
-  {"id": "failover_kit_check", "name": "Failover Kit Check", "skill": "any", "work": 40, "complexity": 1, "deadline": 240, "importance": 0.3,
+  {"id": "failover_kit_check", "name": "Failover Kit Check", "skill": "any", "work": 40, "complexity": 3, "deadline": 240, "importance": 0.3,
    "desc": "Check the status of the failover kit.", "schedule": {"type": "daily", "at": "15:00", "days": ["Sat"]}},
 
   {"id": "landslide_watch", "name": "Rainfall landslide watch", "skill": "landslide", "work": 25, "complexity": 2, "deadline": 180, "importance": 1.0,
    "desc": "Heavy rain forecast. Review slip-prone areas.", "schedule": {"type": "random", "per_day": 0.05}},
 
-  {"id": "volcanic_tremor", "name": "Volcanic tremor check", "skill": "volcano", "work": 30, "complexity": 3, "deadline": 180, "importance": 0.8,
+  {"id": "volcanic_tremor", "name": "Volcanic tremor check", "skill": "volcano", "work": 50, "complexity": 3, "deadline": 180, "importance": 0.8,
    "desc": "Tremor levels have changed at a volcano.", "schedule": {"type": "random", "per_day": 0.05}},
 
-  {"id": "gnss_check", "name": "GNSS slow-slip check", "skill": "seismic", "work": 30, "complexity": 3, "deadline": 360, "importance": 0.9,
+  {"id": "gnss_check", "name": "GNSS slow-slip check", "skill": "seismic", "work": 50, "complexity": 3, "deadline": 360, "importance": 0.9,
    "desc": "GPS stations are moving oddly. Slow slip event?", "schedule": {"type": "random", "per_day": 0.05}},
 
-  {"id": "legacy_script_fix", "name": "Fix the legacy script", "skill": "systems", "work": 60, "complexity": 3, "deadline": 120, "importance": 0.8,
+  {"id": "legacy_script_fix", "name": "Fix the legacy script", "skill": "systems", "work": 90, "complexity": 3, "deadline": 120, "importance": 0.8,
    "desc": "It broke again. Nobody knows why it worked in the first place.", "schedule": {"type": "none"}},
 
   {"id": "ministry_briefing_prep", "name": "Prepare ministry briefing", "skill": "comms", "work": 60, "complexity": 3, "deadline": 180, "importance": 1.5,
    "desc": "Slides, talking points and a one-page summary.", "schedule": {"type": "none"}},
 
-  {"id": "phantom_events", "name": "Investigate phantom events", "skill": "systems", "work": 80, "complexity": 3, "deadline": 180, "importance": 1.0,
+  {"id": "phantom_events", "name": "Investigate phantom events", "skill": "systems", "work": 100, "complexity": 3, "deadline": 360, "importance": 1.0,
    "desc": "The automatic system is detecting earthquakes that don't exist.", "schedule": {"type": "none"}},
 
-  {"id": "media_interview", "name": "Media interview", "skill": "comms", "work": 40, "complexity": 3, "deadline": 90, "importance": 1.5,
+  {"id": "media_interview", "name": "Media interview", "skill": "comms", "work": 40, "complexity": 4, "deadline": 180, "importance": 1.5,
    "desc": "Live radio interview about recent activity.", "schedule": {"type": "none"}},
 
-  {"id": "debunk_post", "name": "Debunk viral post", "skill": "comms", "work": 30, "complexity": 2, "deadline": 90, "importance": 1.2,
+  {"id": "debunk_post", "name": "Debunk viral post", "skill": "comms", "work": 60, "complexity": 3, "deadline": 120, "importance": 1.2,
    "desc": "No, nobody can predict earthquakes from cloud shapes.", "schedule": {"type": "none"}},
 
   {"id": "beta_crash", "name": "Beta tool crash", "skill": "systems", "work": 45, "complexity": 3, "deadline": 120, "importance": 0.8,
    "desc": "The vendor's beta tool fell over.", "schedule": {"type": "none"}},
 
-  {"id": "exercise_inject", "name": "Exercise inject", "skill": "tsunami", "work": 30, "complexity": 3, "deadline": 120, "importance": 1.0,
+  {"id": "app_crash", "name": "Tool crash", "skill": "systems", "work": 60, "complexity": 3, "deadline": 120, "importance": 0.5,
+   "desc": "A tool has broken.", "schedule": {"type": "none"}},
+
+  {"id": "exercise_inject", "name": "Exercise inject", "skill": "tsunami", "work": 60, "complexity": 3, "deadline": 120, "importance": 1.0,
    "desc": "Respond to a scripted scenario message from the exercise team.", "schedule": {"type": "none"}},
 
   {"id": "unrest_assessment", "name": "Volcanic unrest assessment", "skill": "volcano", "work": 50, "complexity": 4, "deadline": 120, "importance": 1.8,
    "desc": "Pull together all the data on the unrest.", "schedule": {"type": "none"}},
 
-  {"id": "station_repair", "name": "Coordinate station repair", "skill": "systems", "work": 30, "complexity": 2, "deadline": 180, "importance": 0.6,
+  {"id": "station_repair", "name": "Coordinate station repair", "skill": "systems", "work": 120, "complexity": 2, "deadline": 240, "importance": 0.6,
    "desc": "Organise a field technician for a damaged site.", "schedule": {"type": "none"}},
 
-  {"id": "shakeout_comms", "name": "ShakeOut drill comms", "skill": "comms", "work": 30, "complexity": 2, "deadline": 180, "importance": 1.0,
+  {"id": "shakeout_comms", "name": "ShakeOut drill comms", "skill": "comms", "work": 90, "complexity": 2, "deadline": 180, "importance": 1.0,
    "desc": "Posts and a media release for the national earthquake drill.", "schedule": {"type": "none"}},
 
-  {"id": "data_request", "name": "Research data request", "skill": "systems", "work": 40, "complexity": 2, "deadline": 240, "importance": 0.6,
+  {"id": "data_request", "name": "Research data request", "skill": "systems", "work": 180, "complexity": 2, "deadline": 400, "importance": 0.6,
    "desc": "Pull a big waveform and catalogue extract for a university group.", "schedule": {"type": "none"}},
 
   {"id": "regional_assist", "name": "Help a Pacific partner", "skill": "seismic", "work": 40, "complexity": 4, "deadline": 120, "importance": 1.2,
    "desc": "Help a partner agency locate a regional quake.", "schedule": {"type": "none"}},
 
-  {"id": "server_patch", "name": "Patch the processing servers", "skill": "systems", "work": 45, "complexity": 3, "deadline": 240, "importance": 0.7,
+  {"id": "server_patch", "name": "Patch the processing servers", "skill": "systems", "work": 180, "complexity": 3, "deadline": 480, "importance": 0.7,
    "desc": "Apply the security patch IT left for you.", "schedule": {"type": "none"}},
 
   {"id": "aftershock_forecast", "name": "Update aftershock forecast", "skill": "seismic", "work": 45, "complexity": 4, "deadline": 120, "importance": 1.5,
    "desc": "Emergency management want the latest aftershock probabilities.", "schedule": {"type": "none"}},
 
-  {"id": "webcam_review", "name": "Volcano webcam review", "skill": "volcano", "work": 12, "complexity": 1, "deadline": 180, "importance": 0.4,
-   "desc": "Something odd on a webcam. Steam? Cloud? Eruption?", "schedule": {"type": "none"}}
+  {"id": "webcam_review", "name": "Volcano webcam review", "skill": "volcano", "work": 25, "complexity": 2, "deadline": 180, "importance": 0.4,
+   "desc": "Something odd on a webcam. Steam? Cloud? Eruption?", "schedule": {"type": "none"}},
+
+  {"id": "webcam_analysis", "name": "Volcano webcam analysis", "skill": "volcano", "work": 400, "complexity": 2, "deadline": 1000, "importance": 1.0,
+   "desc": "A VDO has requested a huge analysis of webcam data", "schedule": {"type": "none"}},
+
+  {"id": "contract_hazard_report", "name": "Commercial hazard report", "skill": "seismic", "work": 1200, "complexity": 3, "deadline": 4000, "importance": 0.3,
+   "desc": "An engineering firm wants a seismic hazard summary for a new build.", "schedule": {"type": "random", "per_day": 0.02},
+   "reward": [{"type": "budget", "amount": 3.0}]},
+
+  {"id": "contract_insurance", "name": "Slip assessment", "skill": "landslide", "work": 800, "complexity": 3, "deadline": 2500, "importance": 1.0,
+   "desc": "The Natural Hazards Commission want to know if a slip was set off by rain or by a quake.", "schedule": {"type": "random", "per_day": 0.02},
+   "reward": [{"type": "budget", "amount": 2.5}]},
+
+  {"id": "contract_data_request", "name": "Paid data request", "skill": "seismic", "work": 1440, "complexity": 2, "deadline": 4000, "importance": 1.0,
+   "desc": "A consultancy is paying for a high quality extract of recent catalogue data.", "schedule": {"type": "random", "per_day": 0.02},
+   "reward": [{"type": "budget", "amount": 1.5}]},
+
+  {"id": "contract_tsunami_maps", "name": "Council evacuation map review", "skill": "tsunami", "work": 1440, "complexity": 3, "deadline": 5000, "importance": 1.0,
+   "desc": "A regional council is paying for a review of its tsunami evacuation maps.", "schedule": {"type": "random", "per_day": 0.03},
+   "reward": [{"type": "budget", "amount": 2.0}, {"type": "rating", "amount": 1.0}]},
+
+  {"id": "contract_school_talk", "name": "School science talk", "skill": "comms", "work": 360, "complexity": 2, "deadline": 1440, "importance": 1.0,
+   "desc": "A local school wants someone to explain earthquakes to a Year 8 class.", "schedule": {"type": "random", "per_day": 0.03},
+   "reward": [{"type": "rating", "amount": 2.0}]},
+
+  {"id": "contract_app", "name": "Build an internal app", "skill": "systems", "work": 1440, "complexity": 4, "deadline": 5000, "importance": 0.3,
+   "desc": "Turn that handy script into a proper tool the whole team can use.", "schedule": {"type": "random", "per_day": 0.03},
+   "reward": [{"type": "relic", "rarities": ["common", "uncommon"], "tag": "tech"}]}
 ]

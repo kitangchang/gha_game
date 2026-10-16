@@ -84,8 +84,13 @@ def apply_effect(eng, e: dict, target=None) -> list:
             rar = e.get("rarities")
             level = getattr(run, "unlock_level", 99)
             choices = [r["id"] for r in data.relics.values()
-                       if r["id"] not in run.relics and (not rar or r["rarity"] in rar)
+                       if r["id"] not in run.relics and (r["rarity"] in rar if rar else r["rarity"] != "boss")
                        and int(r.get("unlock_level", 1)) <= level]
+            tag = e.get("tag")
+            if tag:
+                # Prefer tools with this tag; if there are none left, any tool of those rarities will do.
+                tagged = [rid for rid in choices if tag in data.relics[rid].get("tags", [])]
+                choices = tagged or choices
         if not choices:
             return ["No new tool available"]
         rid = rng.choice(choices)
@@ -124,3 +129,28 @@ def apply_effect(eng, e: dict, target=None) -> list:
         g = eng.add_temp_gha(e.get("name", "Contractor"), e.get("skills", {}))
         return [f"{g.name} has arrived"] if g else ["No free desk"]
     return []
+
+
+def reward_summary(data, effects: list) -> str:
+    """Short text for what a contract pays: '+$3.0k', 'a new uncommon or rare tool', '+2 trust'."""
+    parts = []
+    for e in effects:
+        kind = e.get("type")
+        if kind == "budget":
+            parts.append(f"+{fmt_money(e['amount'])}")
+        elif kind == "rating":
+            parts.append(f"{e['amount']:+g} trust")
+        elif kind == "relic":
+            if e.get("id") and e["id"] in data.relics:
+                parts.append(data.relics[e["id"]]["name"])
+            else:
+                rar = e.get("rarities")
+                tag = data.tags[e["tag"]]["name"] + " " if e.get("tag") in data.tags else ""
+                parts.append("a new " + (" or ".join(rar) + " " if rar else "") + tag + "tool")
+        elif kind == "consumable":
+            parts.append(data.consumables[e["id"]]["name"] if e.get("id") in data.consumables else "a random supply")
+        elif kind == "modifier":
+            parts.append(f"a {e.get('hours', 1):g} h boost")
+        elif kind == "chance":
+            parts.append("a chance of a bonus")
+    return ", ".join(parts) or "a reward"

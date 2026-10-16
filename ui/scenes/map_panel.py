@@ -24,7 +24,7 @@ class MapPanel:
     def __init__(self, data, rect):
         self.data = data
         self.rect = pygame.Rect(rect)
-        self.map_rect = pygame.Rect(self.rect.x + 3, self.rect.y + 16, self.rect.width - 6, self.rect.height - 34)
+        self.map_rect = pygame.Rect(self.rect.x + 3, self.rect.y + 3, self.rect.width - 6, self.rect.height - 21)
         self.strip = pygame.Rect(self.rect.x + 6, self.map_rect.bottom + 2, self.rect.width - 12, 14)
         w_deg = (MAIN["lon"][1] - MAIN["lon"][0]) * KX
         h_deg = MAIN["lat"][1] - MAIN["lat"][0]
@@ -55,7 +55,7 @@ class MapPanel:
         surf = pygame.Surface((self.rect.width + 2 * pad, self.rect.height + 2 * pad), pygame.SRCALPHA)
         origin = (self.rect.x - pad, self.rect.y - pad)
         local = self.rect.move(-origin[0], -origin[1])
-        screen_frame(surf, local, "SEISMICITY · LAST 24 H")
+        screen_frame(surf, local)
         mr = self.map_rect.move(-origin[0], -origin[1])
         pygame.draw.rect(surf, OCEAN, mr, border_radius=3)
         for lat in range(-46, -33, 2):
@@ -85,8 +85,6 @@ class MapPanel:
 
     def draw(self, surf, eng, ripples: list, t: float, highlight=None):
         surf.blit(self.background, self._bg_origin)
-        draw_text(surf, "colour = depth · size = mag", (self.rect.right - 6, self.rect.y + 4), 8, C.faint,
-                  anchor="topright")
         window = 1440.0
         recent = [ev for ev in eng.events.values() if eng.now - ev.t <= window or ev.sops and eng.now - ev.t <= 3 * window]
         recent.sort(key=lambda e: e.mag)

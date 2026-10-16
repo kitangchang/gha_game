@@ -144,7 +144,8 @@ class DayPlan:
     score: float
     percentile: float
     target: float
-    boss: bool = False
+    boss: bool = False          # the week's boss day (every Sunday); survive the week for a reward
+    final: bool = False         # the run's final boss day
     random_event_at: float | None = None   # offset minutes into the day, if a '?' day
     max_mag: float = 0.0
     sop_count: int = 0

@@ -1,117 +1,130 @@
 [
   {"_doc": "kind: good | bad | balanced (an upside and a downside). Trait modifiers apply to the analyst (target self) or to everyone else on the same shift (target team). See README for stats and conditions."},
 
-  {"id": "night_owl", "name": "Night Owl", "kind": "good", "weight": 3,
+  {"id": "night_owl", "tags": ["night"], "name": "Night Owl", "kind": "good", "weight": 3,
    "desc": "Night shifts tire them half as much.",
    "modifiers": [{"stat": "fatigue_gain", "op": "mult", "value": 0.5, "when": {"shift": "night"}}]},
 
-  {"id": "early_bird", "name": "Early Bird", "kind": "balanced", "weight": 3,
+  {"id": "early_bird", "tags": ["caffeine"], "name": "Early Bird", "kind": "balanced", "weight": 3,
    "desc": "10% faster on morning shifts, but night shifts tire them 25% more.",
    "modifiers": [{"stat": "speed", "op": "mult", "value": 1.1, "when": {"shift": "morning"}},
                  {"stat": "fatigue_gain", "op": "mult", "value": 1.25, "when": {"shift": "night"}}]},
 
-  {"id": "steady", "name": "Steady Under Pressure", "kind": "good", "weight": 2,
+  {"id": "steady", "tags": ["science", "cims"], "name": "Steady Under Pressure", "kind": "good", "weight": 2,
    "desc": "Half the error chance on complexity 4+ tasks.",
    "modifiers": [{"stat": "error", "op": "mult", "value": 0.5, "when": {"min_complexity": 4}}]},
 
-  {"id": "media_natural", "name": "Media Natural", "kind": "good", "weight": 2,
+  {"id": "media_natural", "tags": ["media"], "name": "Media Natural", "kind": "good", "weight": 2,
    "desc": "Comms tasks 30% faster with 30% fewer errors.",
    "modifiers": [{"stat": "speed", "op": "mult", "value": 1.3, "when": {"skill": "comms"}},
                  {"stat": "error", "op": "mult", "value": 0.7, "when": {"skill": "comms"}}]},
 
-  {"id": "mentor", "name": "Mentor", "kind": "good", "weight": 2,
+  {"id": "mentor", "tags": ["teamwork"], "name": "Mentor", "kind": "good", "weight": 2,
    "desc": "Everyone else on their shift gains 50% more XP and makes 10% fewer errors.",
    "modifiers": [{"stat": "xp", "op": "mult", "value": 1.5, "target": "team"},
                  {"stat": "error", "op": "mult", "value": 0.9, "target": "team"}]},
 
-  {"id": "perfectionist", "name": "Perfectionist", "kind": "balanced", "weight": 2,
+  {"id": "perfectionist", "tags": ["tech"], "name": "Perfectionist", "kind": "balanced", "weight": 2,
    "desc": "40% fewer errors, but 12% slower.",
    "modifiers": [{"stat": "error", "op": "mult", "value": 0.6},
                  {"stat": "speed", "op": "mult", "value": 0.88}]},
 
-  {"id": "fast_loose", "name": "Fast & Loose", "kind": "balanced", "weight": 2,
+  {"id": "fast_loose", "tags": ["caffeine"], "name": "Fast & Loose", "kind": "balanced", "weight": 2,
    "desc": "20% faster, but 40% more errors.",
    "modifiers": [{"stat": "speed", "op": "mult", "value": 1.2},
                  {"stat": "error", "op": "mult", "value": 1.4}]},
 
-  {"id": "iron", "name": "Iron Constitution", "kind": "good", "weight": 2,
+  {"id": "iron", "tags": ["wellbeing"], "name": "Iron Constitution", "kind": "good", "weight": 2,
    "desc": "Long-term fatigue builds 40% slower.",
    "modifiers": [{"stat": "ltf_gain", "op": "mult", "value": 0.6}]},
 
-  {"id": "burnout_risk", "name": "Burnout Risk", "kind": "bad", "weight": 2,
+  {"id": "burnout_risk", "tags": ["wellbeing"], "name": "Burnout Risk", "kind": "bad", "weight": 2,
    "desc": "Long-term fatigue builds 50% faster.",
    "modifiers": [{"stat": "ltf_gain", "op": "mult", "value": 1.5}]},
 
-  {"id": "prone_colds", "name": "Prone to Colds", "kind": "bad", "weight": 2,
+  {"id": "prone_colds", "tags": ["wellbeing"], "name": "Prone to Colds", "kind": "bad", "weight": 2,
    "desc": "2.5x more likely to call in sick.",
    "modifiers": [{"stat": "sick_chance", "op": "mult", "value": 2.5}]},
 
-  {"id": "quick_learner", "name": "Quick Learner", "kind": "good", "weight": 2,
+  {"id": "quick_learner", "tags": ["teamwork"], "name": "Quick Learner", "kind": "good", "weight": 2,
    "desc": "Gains double XP.",
    "modifiers": [{"stat": "xp", "op": "mult", "value": 2.0}]},
 
-  {"id": "old_hand", "name": "Old Hand", "kind": "good", "weight": 2,
+  {"id": "old_hand", "tags": ["science"], "name": "Old Hand", "kind": "good", "weight": 2,
    "desc": "Routine (complexity 1-2) tasks 30% faster.",
    "modifiers": [{"stat": "speed", "op": "mult", "value": 1.3, "when": {"max_complexity": 2}}]},
 
-  {"id": "tsunami_nerd", "name": "Tsunami Nerd", "kind": "good", "weight": 2,
+  {"id": "tsunami_nerd", "tags": ["science"], "name": "Tsunami Nerd", "kind": "good", "weight": 2,
    "desc": "Tsunami tasks 25% faster.",
    "modifiers": [{"stat": "speed", "op": "mult", "value": 1.25, "when": {"skill": "tsunami"}}]},
 
-  {"id": "volcano_whisperer", "name": "Volcano Whisperer", "kind": "good", "weight": 2,
+  {"id": "volcano_whisperer", "tags": ["science"], "name": "Volcano Whisperer", "kind": "good", "weight": 2,
    "desc": "Volcano tasks 30% faster.",
    "modifiers": [{"stat": "speed", "op": "mult", "value": 1.3, "when": {"skill": "volcano"}}]},
 
-  {"id": "data_wrangler", "name": "Data Wrangler", "kind": "good", "weight": 2,
+  {"id": "data_wrangler", "tags": ["tech"], "name": "Data Wrangler", "kind": "good", "weight": 2,
    "desc": "Systems tasks 30% faster.",
    "modifiers": [{"stat": "speed", "op": "mult", "value": 1.3, "when": {"skill": "systems"}}]},
 
-  {"id": "geomorph_geek", "name": "Geomorph Geek", "kind": "good", "weight": 2,
+  {"id": "geomorph_geek", "tags": ["science"], "name": "Geomorph Geek", "kind": "good", "weight": 2,
    "desc": "Landslide tasks 30% faster.",
    "modifiers": [{"stat": "speed", "op": "mult", "value": 1.3, "when": {"skill": "landslide"}}]},
 
-  {"id": "night_grump", "name": "Night Grump", "kind": "bad", "weight": 2,
+  {"id": "night_grump", "tags": ["night"], "name": "Night Grump", "kind": "bad", "weight": 2,
    "desc": "35% more errors on night shifts.",
    "modifiers": [{"stat": "error", "op": "mult", "value": 1.35, "when": {"shift": "night"}}]},
 
-  {"id": "team_player", "name": "Team Player", "kind": "good", "weight": 2,
+  {"id": "team_player", "tags": ["teamwork"], "name": "Team Player", "kind": "good", "weight": 2,
    "desc": "Everyone else on their shift tires 10% slower.",
    "modifiers": [{"stat": "fatigue_gain", "op": "mult", "value": 0.9, "target": "team"}]},
 
-  {"id": "caffeine", "name": "Caffeine Dependent", "kind": "balanced", "weight": 2,
+  {"id": "caffeine", "tags": ["caffeine"], "name": "Caffeine Dependent", "kind": "balanced", "weight": 2,
    "desc": "10% faster at every task, but tires 25% faster.",
    "modifiers": [{"stat": "speed", "op": "mult", "value": 1.1},
                  {"stat": "fatigue_gain", "op": "mult", "value": 1.25}]},
 
-  {"id": "calm_voice", "name": "Calm Voice", "kind": "good", "weight": 2,
+  {"id": "calm_voice", "tags": ["media"], "name": "Calm Voice", "kind": "good", "weight": 2,
    "desc": "40% fewer errors on SOP tasks.",
    "modifiers": [{"stat": "error", "op": "mult", "value": 0.6, "when": {"kind": "sop"}}]},
 
-  {"id": "multitasker", "name": "Multitasker", "kind": "good", "weight": 2,
+  {"id": "multitasker", "tags": ["tech"], "name": "Multitasker", "kind": "good", "weight": 2,
    "desc": "Business-as-usual tasks 20% faster.",
    "modifiers": [{"stat": "speed", "op": "mult", "value": 1.2, "when": {"kind": "bau"}}]},
 
-  {"id": "distractible", "name": "Easily Distracted", "kind": "bad", "weight": 2,
+  {"id": "distractible", "tags": ["media"], "name": "Easily Distracted", "kind": "bad", "weight": 2,
    "desc": "8% slower at everything.",
    "modifiers": [{"stat": "speed", "op": "mult", "value": 0.92}]},
 
-  {"id": "adrenaline", "name": "Adrenaline Junkie", "kind": "balanced", "weight": 2,
+  {"id": "adrenaline", "tags": ["caffeine", "cims"], "name": "Adrenaline Junkie", "kind": "balanced", "weight": 2,
    "desc": "SOP tasks 25% faster, but business-as-usual tasks 15% slower.",
    "modifiers": [{"stat": "speed", "op": "mult", "value": 1.25, "when": {"kind": "sop"}},
                  {"stat": "speed", "op": "mult", "value": 0.85, "when": {"kind": "bau"}}]},
 
-  {"id": "big_picture", "name": "Big Picture Thinker", "kind": "balanced", "weight": 2,
+  {"id": "big_picture", "tags": ["science"], "name": "Big Picture Thinker", "kind": "balanced", "weight": 2,
    "desc": "Complexity 4+ tasks 20% faster, but routine (complexity 1-2) tasks 15% slower.",
    "modifiers": [{"stat": "speed", "op": "mult", "value": 1.2, "when": {"min_complexity": 4}},
                  {"stat": "speed", "op": "mult", "value": 0.85, "when": {"max_complexity": 2}}]},
 
-  {"id": "workaholic", "name": "Workaholic", "kind": "balanced", "weight": 2,
+  {"id": "workaholic", "tags": ["night"], "name": "Workaholic", "kind": "balanced", "weight": 2,
    "desc": "Tires 20% slower on shift, but long-term fatigue builds 30% faster.",
    "modifiers": [{"stat": "fatigue_gain", "op": "mult", "value": 0.8},
                  {"stat": "ltf_gain", "op": "mult", "value": 1.3}]},
 
-  {"id": "chatterbox", "name": "Chatterbox", "kind": "balanced", "weight": 2,
+  {"id": "chatterbox", "tags": ["media"], "name": "Chatterbox", "kind": "balanced", "weight": 2,
    "desc": "Comms tasks 25% faster, but everyone else on their shift is 5% slower.",
    "modifiers": [{"stat": "speed", "op": "mult", "value": 1.25, "when": {"skill": "comms"}},
-                 {"stat": "speed", "op": "mult", "value": 0.95, "target": "team"}]}
+                 {"stat": "speed", "op": "mult", "value": 0.95, "target": "team"}]},
+
+  {"id": "incident_controller", "tags": ["cims"], "name": "Incident Controller", "kind": "good", "weight": 2,
+   "desc": "+1 skill on SOP tasks.",
+   "modifiers": [{"stat": "skill", "op": "add", "value": 1, "when": {"kind": "sop"}}]},
+
+  {"id": "cims_trained", "tags": ["cims"], "name": "CIMS Trained", "kind": "good", "weight": 2,
+   "desc": "+20% speed on SOP tasks.",
+   "modifiers": [{"stat": "speed", "op": "mult", "value": 1.2, "when": {"kind": "sop"}}]},
+
+  {"id": "by_the_book", "tags": ["cims"], "name": "By the Book", "kind": "balanced", "weight": 2,
+   "desc": "SOP tasks 25% fewer errors, but business-as-usual tasks 10% slower.",
+   "modifiers": [{"stat": "error", "op": "mult", "value": 0.75, "when": {"kind": "sop"}},
+                 {"stat": "speed", "op": "mult", "value": 0.9, "when": {"kind": "bau"}}]}
 ]

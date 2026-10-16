@@ -27,11 +27,11 @@ def shift_hours(data, sh) -> tuple:
 
 
 def shift_legend(data) -> str:
-    """'M 0600–1400 · L 1400–2200 · N 2200–0600'"""
+    """'M 0600-1400 · L 1400-2200 · N 2200-0600'"""
     parts = []
     for sh in data.shifts:
         h0, h1 = shift_hours(data, sh)
-        parts.append(f"{sh['name'][0]} {h0:02d}00–{h1:02d}00")
+        parts.append(f"{sh['name'][0]} {h0:02d}00-{h1:02d}00")
     return " · ".join(parts)
 
 
@@ -162,8 +162,6 @@ class RosterTab:
                 chip_w, cols, top, capacity = rect.width - 20, 1, rect.y + HEAD_H, 3
             elif group == "bench":
                 draw_text(surf, "BENCH", (rect.x + 14, rect.y + 13), 14, head_col, "bold")
-                draw_text(surf, "Relief: drag into a team to cover a gap", (rect.right - 14, rect.y + 15), 11, sub_col,
-                          anchor="topright")
                 chip_w, cols, top, capacity = rect.width - 20, 1, rect.y + HEAD_H, 3
             else:
                 rec = data.config["long_term"]["leave_recovery"]
@@ -267,7 +265,8 @@ class RosterTab:
             pygame.draw.rect(surf, col, (label.x, label.y + 4, 3, label.height - 8), border_radius=2)
             draw_text(surf, data.team_name(team), (label.x + 10, label.y + 7), 13, col, "bold")
             for i, g in enumerate(members[:3]):
-                draw_portrait(surf, (label.right - 14 - i * 22, label.centery), 11, g, data, run)
+                draw_portrait(surf, (label.right - 14 - i * 22, label.centery), 11, g, data, run,
+                              bg=mix(col, C.panel, 0.82))
             cells = run.roster.grid.get(team, [False] * slots)
             for s in range(slots):
                 rect = pygame.Rect(x0 + s * cell_w, y, cell_w - 3, 34)
@@ -289,11 +288,11 @@ class RosterTab:
                     h0, h1 = shift_hours(data, shift)
                     TOOLTIP.set([(f"{data.team_name(team)} team · {DAY_NAMES[day]} {shift['name'].lower()} shift",
                                   col, 13, "bold"),
-                                 (f"{h0:02d}00–{h1:02d}00", C.dim, 12),
+                                 (f"{h0:02d}00-{h1:02d}00", C.dim, 12),
                                  (f"Members: {names}", C.dim, 12), ("Click to toggle for this week", C.faint, 11)], 300)
                 self.cell_rects.append((rect, team, s))
         y = Y0 + 46 + len(data.team_keys) * 38 + 10
-        draw_text(surf, "COVERAGE", (gx, y), 11, C.faint, "bold")
+        draw_text(surf, "SKILL COVERAGE", (gx, y), 11, C.faint, "bold")
         y += 18
         desks = desk_count(data, run)
         lineups = [self._lineup(s) for s in range(slots)]

@@ -37,6 +37,21 @@ def _entries(items: list) -> list:
     return [it for it in items if isinstance(it, dict) and "id" in it]
 
 
+def _by_id(name: str) -> dict:
+    """{id: entry} for a data file. Two entries with the same id would silently
+    hide one of them, so that's an error."""
+    out: dict = {}
+    dupes = []
+    for it in _entries(_load(name)):
+        if it["id"] in out:
+            dupes.append(it["id"])
+        out[it["id"]] = it
+    if dupes:
+        raise DataError(f"{name}: the same id is used more than once: {', '.join(sorted(set(dupes)))}. "
+                        "Delete or rename the old entry.")
+    return out
+
+
 class GameData:
     def __init__(self):
         self.config = _load("config.json")
@@ -45,15 +60,18 @@ class GameData:
             sk["color"] = tuple(sk.get("color", (160, 170, 190)))
         self.skill_keys = [s["key"] for s in self.skills]
         self.skill_by_key = {s["key"]: s for s in self.skills}
-        self.traits = {t["id"]: t for t in _entries(_load("traits.json"))}
+        self.traits = _by_id("traits.json")
         for t in self.traits.values():
             # "kind" is good | balanced | bad; older files used "good": true/false.
             t["kind"] = t.get("kind") or ("good" if t.get("good", True) else "bad")
             t["good"] = t["kind"] != "bad"
-        self.relics = {r["id"]: r for r in _entries(_load("relics.json"))}
-        self.consumables = {c["id"]: c for c in _entries(_load("consumables.json"))}
-        self.training = {t["id"]: t for t in _entries(_load("training.json"))}
-        self.bau = {b["id"]: b for b in _entries(_load("bau_tasks.json"))}
+        self.relics = _by_id("relics.json")
+        self.tags = _by_id("tags.json")
+        for t in self.tags.values():
+            t["color"] = tuple(t.get("color", (180, 180, 190)))
+        self.consumables = _by_id("consumables.json")
+        self.training = _by_id("training.json")
+        self.bau = _by_id("bau_tasks.json")
         sops = _load("sops.json")
         self.regions = sops["regions"]
         self.sop_task_types = sops["task_types"]
@@ -158,6 +176,8 @@ class GameData:
             for s in (sh if isinstance(sh, list) else [sh] if sh else []):
                 if s not in shift_keys:
                     errors.append(f"{where}: unknown shift '{s}' (use one of {sorted(shift_keys)})")
+            if "per_tag" in m and m["per_tag"] != "any" and m["per_tag"] not in self.tags:
+                errors.append(f"{where}: per_tag '{m['per_tag']}' is not a tag in tags.json")
             if "target" in m and (not allow_target or m["target"] not in TARGETS):
                 errors.append(f"{where}: bad target '{m['target']}'")
 
@@ -173,6 +193,10 @@ class GameData:
                     continue
                 if t == "spawn_task" and e.get("task") not in self.bau:
                     errors.append(f"{where}: spawn_task refers to unknown task '{e.get('task')}'")
+                if t == "relic" and e.get("id") and e["id"] not in self.relics:
+                    errors.append(f"{where}: unknown tool '{e['id']}'")
+                if t == "relic" and e.get("tag") and e["tag"] not in self.tags:
+                    errors.append(f"{where}: unknown tag '{e['tag']}' (add it to tags.json)")
                 if t == "consumable" and e.get("id") and e["id"] not in self.consumables:
                     errors.append(f"{where}: unknown consumable '{e['id']}'")
                 if t == "modifier":
@@ -188,6 +212,12 @@ class GameData:
                 errors.append(f"traits.json/{t['id']}: kind must be one of {list(TRAIT_KINDS)}")
             for m in t.get("modifiers", []):
                 check_mod(f"traits.json/{t['id']}", m, allow_target=True)
+        for where, items in (("traits.json", self.traits), ("relics.json", self.relics),
+                             ("consumables.json", self.consumables), ("training.json", self.training)):
+            for item in items.values():
+                for tag in item.get("tags", []):
+                    if tag not in self.tags:
+                        errors.append(f"{where}/{item['id']}: unknown tag '{tag}' (add it to tags.json)")
         costs = self.config["economy"]["relic_costs"]
         for r in self.relics.values():
             if r.get("rarity") not in costs:
@@ -248,6 +278,16 @@ class GameData:
             if c.get("target", "none") not in ("none", "gha", "task"):
                 errors.append(f"consumables.json/{c['id']}: target must be none, gha or task")
             check_effects(f"consumables.json/{c['id']}", c.get("effects", []))
+        for r in self.relics.values():
+            for e in r.get("on_gain", []):
+                if e.get("type") not in ("budget", "rating"):
+                    errors.append(f"relics.json/{r['id']}: on_gain only supports budget and rating effects")
+        for b in self.bau.values():
+            if "reward" in b:
+                if not isinstance(b["reward"], list):
+                    errors.append(f"bau_tasks.json/{b['id']}: reward must be a list of effects")
+                else:
+                    check_effects(f"bau_tasks.json/{b['id']}/reward", b["reward"])
         for t in self.training.values():
             if t["effect"] == "skill":
                 check_skill(f"training.json/{t['id']}", t.get("skill", ""))

@@ -9,7 +9,7 @@ from . import shop as shopmod
 from .run import consumable_slots, rotation_grid, snake_draft
 
 RELIC_PRIORITY = ["picker_upgrade", "espresso", "triage_bot", "auto_locator", "legacy_script", "coffee_machine",
-                  "second_monitors", "video_wall", "snack_drawer", "wellness", "comms_team", "rubber_duck",
+                  "second_monitors", "nightshift_movie", "snack_drawer", "wellness", "comms_team", "rubber_duck",
                   "noise_cancelling", "standing_desks", "circadian", "office_dog", "budget_analyst",
                   "tsunami_db", "eat_autofill", "pager_app", "media_training", "shared_runbook"]
 
@@ -55,6 +55,12 @@ class Bot:
         roster.grid = rotation_grid(data, run.week)
 
     def shop(self, run):
+        from .run import claim_boss_reward
+        for flag in ("start_reward", "boss_reward"):
+            options = run.flags.get(flag)
+            if options:
+                ranked = sorted(options, key=lambda r: RELIC_PRIORITY.index(r) if r in RELIC_PRIORITY else 99)
+                claim_boss_reward(self.data, run, ranked[0] if self.use_shop else None, flag)
         if not self.use_shop or not run.shop:
             return
         data = self.data

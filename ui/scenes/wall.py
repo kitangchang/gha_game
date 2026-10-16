@@ -21,13 +21,12 @@ BEZEL_EDGE = (54, 60, 74)
 SCREEN_BG = (8, 11, 16)
 PLUME_TASKS = ("webcam_review", "volcanic_tremor", "unrest_assessment", "val_review", "hydro_check")
 WHAKAARI_SHARE = 0.92          # share of volcano tasks that show on Whakaari; the rest are spread thinly
-STATIONS = ["WEL  HHZ", "SNZO HHZ", "KHZ  HHZ", "BKZ  HHZ", "URZ  HHZ", "RAO  HHZ"]
+STATIONS = ["RAO", "OUZ", "MXZ", "URZ", "WEL", "KHZ", "MSZ", "MQZ"]      
 DART_OK = (46, 170, 76)
 DART_ALERT = (226, 52, 44)
 LED_ON = (255, 46, 34)
 LED_OFF = (36, 10, 10)
 LED_HOUSING = (12, 12, 15)
-
 
 def screen_frame(surf, rect, title: str = "", title_col=None):
     rect = pygame.Rect(rect)
@@ -228,40 +227,150 @@ def draw_cams(scene, surf, rect, mouse):
 
 
 # ------------------------------------------------------------------- traces
+# Approximate station positions (lat, lon). Edit to taste; only used for arrival times and amplitudes.
+STATION_POS = {
+    "RAO": (-29.25, 182.07), "OUZ": (-35.2197, 173.5961), "MXZ": (-37.5622, 178.3067), "URZ": (-38.2592, 177.1109),
+    "WEL": (-41.284, 174.7682), "KHZ": (-42.4160, 173.5390), "MSZ": (-44.6733, 167.9264), "MQZ": (-38.69, 158.882),
+}
+TRACE_WINDOW = 180.0      # game minutes shown across the screen (newest data at the right edge)
+TRACE_STEP = 1           # pixels between samples
+TRACE_COL = (90, 210, 140)
+TRACE_GAIN = 4.5         # quake size relative to the background noise
+TRACE_NOISE_REF = 3.0    # each trace scales to its biggest wiggle, but never zooms in further than this,
+                         # so a quiet trace shows noise at about a third of the row height
+
+
+def _dist_km(lat1, lon1, lat2, lon2) -> float:
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dp, dl = p2 - p1, math.radians(((lon2 - lon1) + 180.0) % 360.0 - 180.0)
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return 6371.0 * 2 * math.asin(min(1.0, math.sqrt(a)))
+
+
+def _arrival(ev, station: str) -> tuple:
+    """(P arrival, S arrival, peak amplitude in 'units', duration, phase seed) for one quake at
+    one station, all fixed for good, so a signal never changes once it's on screen."""
+    lat, lon = STATION_POS[station]
+    d = _dist_km(ev.lat, ev.lon, lat, lon)
+    r = math.hypot(d, max(0.0, ev.depth))
+    vp = (6.0 + 6.0 * min(1.0, r / 8000.0)) * 60.0          # km per game minute, faster through the mantle
+    vs = vp / 1.73
+    tp = ev.t + r / vp
+    ts = ev.t + r / vs
+    amp = TRACE_GAIN * 10 ** (0.55 * (ev.mag - 1.5 * math.log10(max(10.0, r)) + 0.3))
+    dur = 1.5 + 2.5 * max(0.0, ev.mag - 2.0) + min(8.0, r / 400.0)
+    seed = (ev.uid * 7919 + sum(map(ord, station)) * 131) % 1000
+    return tp, ts, amp, dur, seed
+
+
+def _rand(k: int, seed: float) -> float:
+    """A fixed pseudo-random number in -1..1 for sample k (same value every frame)."""
+    v = math.sin(k * 12.9898 + seed * 78.233) * 43758.5453
+    return (v - math.floor(v)) * 2.0 - 1.0
+
+
+def _quake_signal(tau: float, ts_rel: float, amp: float, dur: float, seed: float, k: int = 0) -> float:
+    """Ground motion tau minutes after the P wave arrives: a small P wave, the bigger S
+    wave and a coda that dies away. A few fixed sines per quake make it look irregular."""
+    if tau < 0:
+        return 0.0
+    if tau < ts_rel:
+        env = 0.35 * min(1.0, tau / 0.2) * math.exp(-tau / max(0.5, dur * 0.4))
+    else:
+        u = tau - ts_rel
+        env = min(1.0, u / 0.25 + 0.35) * math.exp(-u / max(0.4, dur / 3.0))
+    if env < 0.01:
+        return 0.0
+    # jagged high-frequency shaking plus a slower swell (the later, longer-period waves)
+    wave = 0.75 * _rand(k, seed) + 0.45 * math.sin(tau * 5.0 + seed)
+    return amp * env * wave
+
+
+def _noise(t: float, s: int, k: int) -> float:
+    """Background noise at absolute game time t (sample k), the same every time it's drawn:
+    a slow ocean microseism plus a little jitter."""
+    return 0.3 * math.sin(t * 1.7 + s * 3.1) + 0.15 * math.sin(t * 0.6 + s * 1.3) + 0.5 * _rand(k, s + 0.5)
+
+
 def draw_traces(scene, surf, rect):
+    """The SEISMIC TRACES screen on the ops room wall."""
     rect = pygame.Rect(rect)
     screen_frame(surf, rect, "SEISMIC TRACES")
-    t = scene.screen_t
-    rows = len(STATIONS)
-    top = rect.y + 18
-    row_h = (rect.height - 22) / rows
     clip = surf.get_clip()
     surf.set_clip(rect.inflate(-4, -4))
-    for s, label in enumerate(STATIONS):
-        cy = top + row_h * (s + 0.5)
-        pygame.draw.line(surf, (18, 30, 30), (rect.x + 4, cy), (rect.right - 4, cy))
-        pts = []
-        amp = scene.activity * (0.6 + 0.4 * math.sin(s * 1.7))
-        width = rect.width - 52
-        front = (t * 70 + s * 34) % (width + 80)
-        for i in range(0, int(width), 2):
-            x = rect.x + 48 + i
-            k = i * 0.23 + t * (6 + s) + s * 3.1
-            wig = math.sin(k) * 1.1 + math.sin(k * 2.7 + s) * 0.8
-            burst = amp * math.sin(i * 0.9 + t * 23) * math.exp(-((i - front) / 24.0) ** 2)
-            pts.append((x, cy + wig + max(-row_h * 0.45, min(row_h * 0.45, burst))))
-        if len(pts) > 1:
-            pygame.draw.aalines(surf, (90, 210, 140), False, pts)
-        surf.blit(render(label, 8, (70, 120, 96), "bold"), (rect.x + 5, cy - 5))
+    area = pygame.Rect(rect.x + 4, rect.y + 18, rect.width - 10, rect.height - 22)
+    state = scene.__dict__.setdefault("_traces", {})
+    draw_seismogram(surf, area, scene.eng.events.values(), scene.eng.now, state)
     surf.set_clip(clip)
     screen_glare(surf, rect)
+
+
+def draw_seismogram(surf, area, events, now: float, state: dict, line_col=TRACE_COL, label_col=(70, 120, 96),
+                    base_col=(18, 30, 30), label_size: int = 8, window: float = TRACE_WINDOW, step: int = TRACE_STEP,
+                    noise_ref: float = TRACE_NOISE_REF):
+    """A scrolling seismogram per station. Time runs right to left: the right edge is now
+    and older data slides off to the left. Each quake arrives at each station at its own
+    time (nearer stations first) and its wiggles are fixed once drawn. events: anything with
+    uid, t, mag, lat, lon and depth. state: a dict kept between frames (cache and scales)."""
+    rows = len(STATIONS)
+    top = area.y
+    row_h = area.height / rows
+    labels = [render(name, label_size, label_col, "bold") for name in STATIONS] if label_col else []
+    x0 = area.x + (4 + max(img.get_width() for img in labels) if labels else 0)
+    right = area.right - 2
+    width = max(1, right - x0)
+    per_px = window / width                                            # game minutes per pixel
+    dt = per_px * step
+    cache = state.setdefault("cache", {})
+    scales = state.setdefault("scales", {})
+    recent = [ev for ev in events if now - window - 40.0 < ev.t <= now]   # quakes that could be on screen
+    k0 = math.floor((now - window) / dt)
+    k1 = math.floor(now / dt)
+    clip_amp = row_h * 0.48
+    for s, name in enumerate(STATIONS):
+        cy = top + row_h * (s + 0.5)
+        if base_col:
+            pygame.draw.line(surf, base_col, (area.x, cy), (area.right, cy))
+        ks = list(range(k0, k1 + 1))
+        ys = [_noise(k * dt, s, k) for k in ks]
+        for ev in recent:
+            key = (ev.uid, name)
+            arr = cache.get(key)
+            if arr is None:
+                arr = cache[key] = _arrival(ev, name)
+            tp, ts, amp, dur, seed = arr
+            span = (ts - tp) + dur * 4.0
+            if amp < 0.08 or tp > now or tp + span < now - window:
+                continue                                 # too small to see, not arrived yet, or long gone
+            a = max(k0, math.ceil(tp / dt))
+            b = min(k1, math.floor((tp + span) / dt))
+            for k in range(a, b + 1):                    # only the samples this quake touches
+                ys[k - k0] += _quake_signal(k * dt - tp, ts - tp, amp, dur, seed, k)
+        # Auto-scale: the biggest sample on screen fills the row, so small quakes show up on a quiet
+        # trace and shrink away when a big one arrives. Eased so the scale doesn't jump.
+        peak = max((abs(y) for k, y in zip(ks, ys) if right - (now - k * dt) / per_px >= x0), default=1.0)
+        target = clip_amp / max(peak, noise_ref)
+        scale = scales.get(name, target)
+        scale += (target - scale) * (0.2 if target < scale else 0.08)    # shrink fast, grow back slowly
+        scales[name] = scale
+        pts = []
+        for k, y in zip(ks, ys):
+            x = right - (now - k * dt) / per_px          # sample times are fixed in absolute time
+            if x >= x0:
+                pts.append((x, cy + max(-clip_amp, min(clip_amp, y * scale))))
+        if len(pts) > 1:
+            pygame.draw.aalines(surf, line_col, False, pts)
+        if labels:
+            surf.blit(labels[s], (area.x + 1, cy - labels[s].get_height() // 2))
+    if len(cache) > 4000:
+        cache.clear()
 
 
 # --------------------------------------------------------------------- DART
 def draw_dart(scene, surf, rect, mouse):
     eng, data = scene.eng, scene.data
     rect = pygame.Rect(rect)
-    screen_frame(surf, rect, "DARTS")
+    screen_frame(surf, rect, "DARTs")
     buoys = data.dart_buoys
     n = max(1, len(buoys))
     rows = 7
